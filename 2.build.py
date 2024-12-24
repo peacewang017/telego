@@ -70,30 +70,41 @@ if not check_ubuntu_version():
     
     print("将启动 ubuntu 18.04进行编译")
     os.system("mkdir -p build")
+
+    def _recover_proxy():
+        pass
+    recover_proxy=_recover_proxy
+
+    # PROXY_ENV=""
+    if os.environ.get("http_proxy"):  
+        PROXY_ADDR=os.environ['http_proxy']
+        if PROXY_ADDR.find("127.0.0.1")!=-1:
+            os.environ['http_proxy']=PROXY_ADDR.replace("127.0.0.1","host.docker.internal")
+            os.environ['https_proxy']=PROXY_ADDR.replace("127.0.0.1","host.docker.internal")
+            def r():
+                os.environ['http_proxy']=PROXY_ADDR
+                os.environ['https_proxy']=PROXY_ADDR
+            recover_proxy=r
+            
     # 创建dockerfile
     with open("build/Dockerfile", "w") as f:
-        f.write("""
+        f.write(f"""
 FROM ubuntu:18.04
-
-RUN unset http_proxy \
-    && unset https_proxy \
-    && unset HTTP_PROXY \
-    && unset HTTPS_PROXY
-RUN apt-get update \
-    && apt-get install -y \
-    git \
-    curl \
-    wget \
-    python3 \
-    python3-yaml \
-    && apt-get clean
+                
+RUN apt-get update
+RUN apt-get install -y git
+RUN apt-get install -y curl 
+RUN apt-get install -y wget 
+RUN apt-get install -y python3 
+RUN apt-get install -y python3-yaml 
+RUN apt-get clean
 
 RUN wget https://go.dev/dl/go1.23.2.linux-amd64.tar.gz
 RUN rm -rf /usr/local/go \
     && tar -C /usr/local -xzf go1.23.2.linux-amd64.tar.gz \
     && rm -rf go1.23.2.linux-amd64.tar.gz
 
-ENV PATH="/usr/local/go/bin:${PATH}"
+ENV PATH="/usr/local/go/bin:${{PATH}}"
 ENV PYTHONIOENCODING=utf-8
 
 CMD ["bash"]
@@ -107,17 +118,21 @@ CMD ["bash"]
             continue
         os.system(f"cp -r ../{f} .")
     os_system_sure("docker build -t telego_build .")
+    recover_proxy()
     os.chdir("..")
     os.system("rm -rf build")
     
     # run: mount ../telego to /telego, workdir is /telego
     telego_prj_abs=os.path.abspath(".")
+    print("building telego at :",telego_prj_abs)
     # os_system_sure(f"docker run -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py '")
     os_system_sure(f"docker run -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py -- privilege'")
 
     # end of call the docker
     exit(0)
 
+
+print("正在容器 ubuntu 18.04 中编译")
 
 # 定义源文件和输出目录
 OUTPUT_DIR = "./dist"
