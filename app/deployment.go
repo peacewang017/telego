@@ -147,7 +147,7 @@ func (d *DeploymentYaml) Verify(prjDir string, yml []byte, skipReadFromFile bool
 				v_ := v.(LocalValueReadFile)
 				fileContent, err := os.ReadFile(path.Join(prjDir, v_.ReadFromFile))
 				if err != nil {
-					return nil, fmt.Errorf("invalid local_values item: read_from_file %s not found", v_.ReadFromFile)
+					return nil, fmt.Errorf("invalid local_values item: read_from_file %s not found", path.Join(prjDir, v_.ReadFromFile))
 				}
 				v_.ReadFromFile = string(fileContent)
 				dply.LocalValues[k] = v_
@@ -652,29 +652,52 @@ func DeploymentUpload(project string, deploymentConf *Deployment) error {
 			func(item DeploymentPrepareItem) string {
 				// fetch image name between last / and :
 				splitTail := strings.Split(*item.Image, "/")
-				return strings.Split(splitTail[len(splitTail)-1], ":")[0]
+				return strings.ReplaceAll(splitTail[len(splitTail)-1], ":", "_")
 			},
 		).([]string)
-		if len(imageNames) > 0 {
-			for _, imageName := range imageNames {
-				localPath := path.Join(config.Load().ProjectDir, "container_image", fmt.Sprintf("image_%s", imageName))
-				remotePath := fmt.Sprintf("/teledeploy_secret/container_image/image_%s", imageName)
-				fmt.Println(color.BlueString("Uploading img %s to %s", localPath, remotePath))
-				util.UploadToMainNode(localPath, remotePath)
+		_, err = util.MainNodeConfReader{}.ReadPubConf(util.PubConfTypeImgUploaderUrl{})
+		if err == nil {
+			util.PrintStep("ImgUploader", "upload images by img uploader")
+			// is img uploader enabled
+			for img := range imageNames {
+				ModJobImgUploader.ImgUploaderLocal(ImgUploaderModeClient{
+					ImagePath: path.Join(config.Load().ProjectDir, "container_image", fmt.Sprintf("image_%s", img))})
 			}
-			imageNamesWithQuotes := []string{}
-			for _, imageName := range imageNames {
-				imageNamesWithQuotes = append(imageNamesWithQuotes, fmt.Sprintf("\"%s\"", imageName))
-			}
+		} else {
+			util.PrintStep("ImgUploader", "upload images by rclone with admin permission")
+			if len(imageNames) > 0 {
+				for _, imageName := range imageNames {
+					localPath := path.Join(config.Load().ProjectDir, "container_image", fmt.Sprintf("image_%s", imageName))
+					remotePath := fmt.Sprintf("/teledeploy_secret/container_image/image_%s", imageName)
+					fmt.Println(color.BlueString("Uploading img %s to %s", localPath, remotePath))
+					util.UploadToMainNode(localPath, remotePath)
+				}
+				imageNamesWithQuotes := []string{}
+				for _, imageName := range imageNames {
+					imageNamesWithQuotes = append(imageNamesWithQuotes, fmt.Sprintf("\"%s\"", imageName))
+				}
 
-			uploadScript := fmt.Sprintf(`
+				imgRepoYaml, err := util.MainNodeConfReader{}.ReadSecretConf(util.SecretConfTypeImgRepo{})
+				if err != nil {
+					fmt.Println(color.RedString("ImgUploader get img repo secret failed: %s", err))
+					os.Exit(1)
+				}
+
+				imgRepo := util.ContainerRegistryConf{}
+				err = yaml.Unmarshal([]byte(imgRepoYaml), &imgRepo)
+				if err != nil {
+					fmt.Println(color.RedString("ImgUploader get img repo secret failed: %s", err))
+					os.Exit(1)
+				}
+
+				uploadScript := fmt.Sprintf(`
 import os, subprocess
 
 images=[%s]
-REPO_HOST="192.168.31.96:5000"
+REPO_HOST="%s"
 REPO_NAMESPACE="teleinfra"
-REPO_USER="admin"
-REPOPW=f"74123"
+REPO_USER="%s"
+REPOPW=f"%s"
 
 os.chdir("/teledeploy_secret/container_image")
 def run_command(command,allow_fail=False):
@@ -690,7 +713,12 @@ def run_command(command,allow_fail=False):
 	else:
 		print(result.stdout)
 		return result.stdout.decode("utf-8")
-run_command(f"docker login -u {REPO_USER} -p {REPOPW} {REPO_HOST}")
+
+sudo_prefix=""
+if os.getuid() != 0:
+	sudo_prefix="sudo "
+
+run_command(f"{sudo_prefix}docker login -u {REPO_USER} -p {REPOPW} {REPO_HOST}")
 for image in images:
 	os.chdir(f"image_{image}")
 	list_dir=os.listdir()
@@ -698,11 +726,11 @@ for image in images:
 	amd64=[f for f in list_dir if f.find("_amd64_")!=-1]
 
 	def upload_arch(arch,arch_tar_pkg):
-		img_name=run_command(f"docker load -i {arch_tar_pkg}").split("Loaded image: ")[-1].strip()
+		img_name=run_command(f"{sudo_prefix}docker load -i {arch_tar_pkg}").split("Loaded image: ")[-1].strip()
 		img_key_no_prefix=img_name.split("/")[-1]
-		id=run_command(f"docker image list -q {img_name}").strip()
-		run_command(f"docker tag {id} {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_{arch}")
-		run_command(f"docker push {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_{arch} -q")
+		id=run_command(f"{sudo_prefix}docker image list -q {img_name}").strip()
+		run_command(f"{sudo_prefix}docker tag {id} {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_{arch}")
+		run_command(f"{sudo_prefix}docker push {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_{arch} -q")
 		return img_key_no_prefix
 	img_key_no_prefix=""
 	mani_create_arch=""
@@ -712,21 +740,23 @@ for image in images:
 	if len(amd64)>0:
 		img_key_no_prefix=upload_arch("amd64",amd64[0])
 		mani_create_arch+=f"{REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_arm64 "
-	run_command(f"docker manifest create {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} {mani_create_arch} --insecure", allow_fail=True)
+	run_command(f"{sudo_prefix}docker manifest create {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} {mani_create_arch} --insecure", allow_fail=True)
 	if len(arm64)>0:
-		run_command(f"docker manifest annotate {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} "
+		run_command(f"{sudo_prefix}docker manifest annotate {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} "
 			f"--arch arm64 {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_arm64")
 	if len(amd64)>0:
-		run_command(f"docker manifest annotate {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} "
+		run_command(f"{sudo_prefix}docker manifest annotate {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} "
 			f"--arch amd64 {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_amd64")
-	run_command(f"docker manifest push {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} --insecure")
+	run_command(f"{sudo_prefix}docker manifest push {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} --insecure")
 	os.chdir("..")
-	`, strings.Join(imageNamesWithQuotes, ","))
+		`, strings.Join(imageNamesWithQuotes, ","), util.ImgRepoAddressNoPrefix, imgRepo.User, imgRepo.Password)
 
-			util.StartRemoteCmds([]string{
-				fmt.Sprintf("%s@%s", util.MainNodeUser, util.MainNodeIp),
-			}, "sudo "+util.EncodeRemoteRunPy(uploadScript), "")
+				util.StartRemoteCmds([]string{
+					fmt.Sprintf("%s@%s", util.MainNodeUser, util.MainNodeIp),
+				}, "sudo "+util.EncodeRemoteRunPy(uploadScript), "")
+			}
 		}
+
 	}
 
 	return nil

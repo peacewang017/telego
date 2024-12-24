@@ -15,6 +15,7 @@ import (
 	"telego/util/strext"
 
 	"github.com/fatih/color"
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/thoas/go-funk"
 	"gopkg.in/yaml.v3"
@@ -76,23 +77,30 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 	}
 
 	// 文件上传处理函数
-	uploadHandler := func(w http.ResponseWriter, r *http.Request) {
+	uploadHandler := func(c *gin.Context) {
+		// 先返回响应头，表示开始处理
+		c.Header("X-Upload-Status", "Started")
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Upload started",
+		})
+
 		// 检查请求方法是否为 POST
-		if r.Method != http.MethodPost {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		if c.Request.Method != "POST" {
+			c.JSON(405, gin.H{"error": "Invalid request method"})
 			return
 		}
 
-		// 解析 multipart 表单
-		if err := r.ParseMultipartForm(10 << 20); err != nil { // 限制上传大小为 10 MB
-			http.Error(w, "Error parsing form data", http.StatusBadRequest)
+		// 获取所有表单数据
+		form, err := c.MultipartForm()
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Error retrieving form data"})
 			return
 		}
 
-		// 遍历所有上传的文件
-		files := r.MultipartForm.File["files"] // 获取字段名为 "files" 的文件
+		// 获取文件部分
+		files := form.File["files"] // 获取字段名为 "files" 的文件
 		if len(files) == 0 {
-			http.Error(w, "No files uploaded", http.StatusBadRequest)
+			c.JSON(400, gin.H{"error": "No files uploaded"})
 			return
 		}
 
@@ -101,7 +109,7 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 		defer os.RemoveAll(tempDir)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error creating temp dir: %v", err), http.StatusInternalServerError)
+			c.JSON(500, gin.H{"error": fmt.Sprintf("Error creating temp dir: %v", err)})
 			return
 		}
 		for _, fileHeader := range files {
@@ -112,7 +120,7 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 				}
 				file, err := fileHeader.Open()
 				if err != nil {
-					http.Error(w, fmt.Sprintf("Error opening file %s: %v", fileHeader.Filename, err), http.StatusInternalServerError)
+					c.JSON(500, gin.H{"error": fmt.Sprintf("Error opening file %s: %v", fileHeader.Filename, err)})
 					return
 				}
 				defer file.Close()
@@ -121,19 +129,19 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 
 				dstPath := filepath.Join(tempDir, fileHeader.Filename)
 				if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
-					http.Error(w, fmt.Sprintf("Error creating directory: %v", err), http.StatusInternalServerError)
+					c.JSON(500, gin.H{"error": fmt.Sprintf("Error creating directory: %v", err)})
 					return
 				}
 				dstFile, err := os.Create(dstPath)
 				if err != nil {
-					http.Error(w, fmt.Sprintf("Error saving file %s: %v", fileHeader.Filename, err), http.StatusInternalServerError)
+					c.JSON(500, gin.H{"error": fmt.Sprintf("Error saving file %s: %v", fileHeader.Filename, err)})
 					return
 				}
 				defer dstFile.Close()
 
 				// 将上传的文件内容写入目标文件
 				if _, err := io.Copy(dstFile, file); err != nil {
-					http.Error(w, fmt.Sprintf("Error writing file %s: %v", fileHeader.Filename, err), http.StatusInternalServerError)
+					c.JSON(500, gin.H{"error": fmt.Sprintf("Error writing file %s: %v", fileHeader.Filename, err)})
 					return
 				}
 
@@ -279,8 +287,7 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 		for _, tarPath := range tarFiles {
 			err := processImage(tarPath)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(fmt.Sprintf("Error processing image: %v", err)))
+				c.JSON(500, gin.H{"error": fmt.Sprintf("Error processing image: %v", err)})
 				return
 			}
 		}
@@ -288,30 +295,27 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 		if len(imgInfoMap) > 0 {
 			registryConfYaml, err := util.MainNodeConfReader{}.ReadSecretConf(util.SecretConfTypeImgRepo{})
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(fmt.Sprintf("Error reading image repo config: %v", err)))
+				c.JSON(500, gin.H{"error": fmt.Sprintf("Error reading image repo config: %v", err)})
 				return
 			}
 			registryConf := util.ContainerRegistryConf{}
 			err = yaml.Unmarshal([]byte(registryConfYaml), &registryConf)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(fmt.Sprintf("Error reading image repo config: %v", err)))
+				c.JSON(500, gin.H{"error": fmt.Sprintf("Error reading image repo config: %v", err)})
 				return
 			}
 
 			util.ModDocker.SetUserPwd(registryConf.User, registryConf.Password)
 		}
 
-		wait := sync.WaitGroup{}
+		wait := &sync.WaitGroup{}
 		failress := make([]error, len(imgInfoMap))
 		succress := make([]string, len(imgInfoMap))
 		idx := 0
 		for _, info := range imgInfoMap {
 			wait.Add(1)
-			idx_ := idx
 			info_ := info
-			go func() {
+			go func(idx_ int) {
 				// 上传镜像
 				uploadImage := func(imageInfos []ImageInfo) error {
 					var amdInfo *ImageInfo
@@ -446,39 +450,53 @@ func (m *ModJobImgUploaderStruct) startServer(workdir string) {
 						res = fmt.Sprintf("Uploaded image %s:%s with arm in %s",
 							armInfo.imagename, armInfo.tag, armInfo.file)
 					}
+					fmt.Println(color.GreenString(res))
 					succress[idx_] = res
 					return nil
 				}
-				failress[idx_] = uploadImage(info_)
+				err := uploadImage(info_)
+				if err != nil {
+					fmt.Println(color.RedString("ImgUploader upload image failed: %s", err))
+				} else {
+					fmt.Println(color.GreenString(succress[idx_]))
+				}
+				failress[idx_] = err
 
 				defer wait.Done()
-			}()
+				fmt.Println("wait done")
+			}(idx)
 			idx += 1
 		}
 		wait.Wait()
+		fmt.Println("wait receive done")
 
 		// 返回成功响应
 		if err := funk.Find(failress, func(err error) bool {
 			return err != nil
 		}); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("Error uploading files: %v", err)))
+			fmt.Println(color.RedString("ImgUploader upload image failed: %v", err))
+			c.JSON(500, gin.H{"error": fmt.Sprintf("ImgUploader upload image failed: %v", err)})
+			return
 		} else {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(strings.Join(succress, "\n")))
+			fmt.Println(color.GreenString("ImgUploader upload image success %v", succress))
+			c.JSON(200, gin.H{"ok": strings.Join(succress, "\n")})
+			fmt.Println("/upload ok return")
+			return
 		}
 
-		fmt.Fprintf(w, "Files uploaded successfully")
 	}
 
-	http.HandleFunc("/upload", uploadHandler) // 注册文件上传的处理函数
+	r := gin.Default()
+	r.POST("/upload", uploadHandler)
+	// http.HandleFunc("/upload", uploadHandler) // 注册文件上传的处理函数
 
 	// 启动 HTTP 服务器
 	port := "8080"
 	fmt.Printf("Starting server on :%s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		fmt.Printf("Error starting server: %s\n", err)
-	}
+	r.Run(":" + port)
+	// if err := http.ListenAndServe(":"+port, nil); err != nil {
+	// 	fmt.Printf("Error starting server: %s\n", err)
+	// }
 }
 
 func (m *ModJobImgUploaderStruct) ParseJob(ImgUploaderCmd *cobra.Command) *cobra.Command {
