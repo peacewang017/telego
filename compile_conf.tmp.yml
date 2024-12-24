@@ -1,0 +1,37 @@
+main_node_ip: 192.168.31.96
+main_node_user: root
+image_repo_with_prefix: http://192.168.31.96:5000
+menu: # 这个字段不用拷贝，始终使用tmp.yml
+  name: "主菜单"
+  children:
+    - name: "deploy-templete"
+      comment: "目录 - 安装、部署模板"
+    - name: deploy
+      comment: "目录 - 项目路径下的自定义部署项目"
+      children:
+        - name: dist_k3s
+          comment: "分布式系统 - 轻量化k8s"
+    - name: "update_config"
+      comment: "目录 - 更新配置"
+      children:
+        - name: "fetch_admin_kubeconfig"
+          comment: "获取管理员all in one kubeconfig"
+        - name: "add_tele_host.py"
+          comment: "脚本 - 一键设置电信内部host"
+        - name: "set_pip_source.py"
+          comment: "脚本 - 一键设置pip源"
+        - name: "set_rpm_source.py"
+          comment: "脚本 - 一键设置yum源"
+        - name: "set_apt_source.py"
+          comment: "脚本 - 一键设置apt源"
+        - name: "start_mainnode_fileserver"
+          comment: "启动主节点文件服务器"
+        - name: "ssh_config"
+          comment: "配置集群ssh免密"
+          children:
+            - name: "1.gen_or_get_key"
+              comment: "生成/获取公私钥，ssh免密"
+            - name: "2.update_key_to_cluster"
+              comment: "将公钥上传到集群"
+    - name: "deploy-templete-upload"
+      comment: "将本地最新模板上传到网络内部"

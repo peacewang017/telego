@@ -1,0 +1,3 @@
+[submodule "teleyard-template"]
+	path = teleyard-template
+	url = https://github.com/AI-Infra-Team/teleyard-template.git
