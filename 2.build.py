@@ -2,6 +2,7 @@ import os
 import hashlib
 import subprocess
 import yaml
+import random
 
 curfdir=os.path.dirname(os.path.abspath(__file__))
 os.chdir(curfdir)
@@ -79,8 +80,8 @@ if not check_ubuntu_version():
     if os.environ.get("http_proxy"):  
         PROXY_ADDR=os.environ['http_proxy']
         if PROXY_ADDR.find("127.0.0.1")!=-1:
-            os.environ['http_proxy']=PROXY_ADDR.replace("127.0.0.1","host.docker.internal")
-            os.environ['https_proxy']=PROXY_ADDR.replace("127.0.0.1","host.docker.internal")
+            del os.environ['http_proxy']
+            del os.environ['https_proxy']
             def r():
                 os.environ['http_proxy']=PROXY_ADDR
                 os.environ['https_proxy']=PROXY_ADDR
@@ -126,8 +127,10 @@ CMD ["bash"]
     telego_prj_abs=os.path.abspath(".")
     print("building telego at :",telego_prj_abs)
     # os_system_sure(f"docker run -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py '")
-    os_system_sure(f"docker run -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py -- privilege'")
-
+    randname="telego_build_"+str(random.randint(10000000,99999999))
+    os_system_sure(f"docker run --name {randname} -it  -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py -- privilege'")
+    # remove container
+    os_system_sure(f"docker rm -f {randname}")
     # end of call the docker
     exit(0)
 

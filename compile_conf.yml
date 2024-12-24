@@ -1,3 +1,0 @@
-main_node_ip: 192.168.31.96
-main_node_user: root
-image_repo_with_prefix: http://192.168.31.96:5000

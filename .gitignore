@@ -2,3 +2,4 @@ dist
 Dockerfile
 .cache
 build
+compile_conf.yml

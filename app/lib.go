@@ -122,8 +122,9 @@ func InitMenuTree(loadSubPrjs bool) *MenuItem {
 					c.LoadDeploymentYml()
 					if c.Deployment != nil {
 						c.Comment = c.Comment
+						util.Logger.Debug("async load deployment yml success: " + c.Name)
 					} else {
-						util.Logger.Debug("async load deployment yml failed: " + c.Name)
+						util.Logger.Warn("async load deployment yml failed: " + c.Name)
 					}
 				}()
 			}
