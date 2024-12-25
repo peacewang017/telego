@@ -198,6 +198,8 @@ func Main() {
 		ModJobImgPrepare,
 		ModJobCreateNewUser,
 		ModJobFetchAdminKubeconfig,
+		ModJobRclone,
+		ModJobSshFs,
 	}
 	for _, mod := range jobmods {
 		rootCmd.AddCommand(mod.ParseJob(&cobra.Command{
