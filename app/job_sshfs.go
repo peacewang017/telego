@@ -3,7 +3,9 @@ package app
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"telego/util"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -46,9 +48,17 @@ func (m ModJobSshFsStruct) doMount(job *sshFsJob) error {
 	if _, err := os.Stat(job.localPath); os.IsNotExist(err) {
 		return fmt.Errorf("local path %s does not exist", job.localPath)
 	}
-	command := []string{"sshfs", job.remotePath, job.localPath, "-o", "reconnect"}
-	if _, err := util.ModRunCmd.NewBuilder(command[0], command[1:]...).WithRoot().ShowProgress().BlockRun(); err != nil {
-		return fmt.Errorf("%v exec error", command)
+
+	// command := []string{"sshfs", job.remotePath, job.localPath, "-o", "reconnect"}
+	// if _, err := util.ModRunCmd.NewBuilder(command[0], command[1:]...).WithRoot().ShowProgress().BlockRun(); err != nil {
+	// 	return fmt.Errorf("%v exec error", command)
+	// }
+	currentUser, _ := user.Current()
+	addRoot := ""
+	if currentUser.Uid != "0" {
+		addRoot = "sudo "
 	}
+	command := addRoot + fmt.Sprintf("sshfs %s %s -o reconnect", job.remotePath, job.localPath)
+	util.RunCmdWithTimeoutCheck(command, 1*time.Minute, func(output string) bool { return true })
 	return nil
 }

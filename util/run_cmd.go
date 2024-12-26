@@ -183,13 +183,14 @@ func RunCmdWithTimeoutCheck(cmdStr string, timeout time.Duration, conditionMet f
 	var accumulatedOutput bytes.Buffer
 	done := make(chan struct{})
 
+	// 协程不断监控输出，如果 conditionMet == true，则取消超时机制
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
 			accumulatedOutput.WriteString(line + "\n")
 			if conditionMet(accumulatedOutput.String()) {
-				cancel() // 满足条件，取消超时
+				cancel()
 				break
 			}
 		}
@@ -197,13 +198,13 @@ func RunCmdWithTimeoutCheck(cmdStr string, timeout time.Duration, conditionMet f
 	}()
 
 	select {
-	case <-ctx.Done():
+	case <-ctx.Done(): // ctx.timeout 时触发
 		if ctx.Err() == context.DeadlineExceeded {
 			_ = cmd.Process.Kill() // 超时强制结束子进程
 			return accumulatedOutput.String(), fmt.Errorf("timeout exceeded, process killed")
 		}
-	case <-done:
-		// 条件满足，继续等待子进程完成
+	case <-done: // close(done) 时触发
+		// 等待 cmd 任务结束
 	}
 
 	if err := cmd.Wait(); err != nil {
