@@ -1,64 +1,61 @@
 package app
 
-// import (
-// 	"fmt"
-// 	"os"
-// 	"os/user"
-// 	"telego/util"
-// 	"time"
+import (
+	"fmt"
+	"os/user"
+	"telego/util"
+	"time"
 
-// 	"github.com/spf13/cobra"
-// )
+	"github.com/spf13/cobra"
+)
 
-// type ModJobSshFsStruct struct{}
+type ModJobSshFsStruct struct{}
 
-// var ModJobSshFs ModJobSshFsStruct
+var ModJobSshFs ModJobSshFsStruct
 
-// // Usage:
-// // telego rclone --mount {localPath} {remoteUser@remoteHostIP:remotePath}
+// Usage:
+// telego sshfs --remotepath {} --localpath {}
 
-// type sshFsJob struct {
-// 	remotePath string
-// 	localPath  string
-// }
+type sshFsJob struct {
+	remotePath string
+	localPath  string
+}
 
-// func (m ModJobSshFsStruct) JobCmdName() string {
-// 	return "sshfs"
-// }
+func (m ModJobSshFsStruct) JobCmdName() string {
+	return "sshfs"
+}
 
-// func (m ModJobSshFsStruct) ParseJob(sshFsCmd *cobra.Command) *cobra.Command {
-// 	job := &sshFsJob{}
+func (m ModJobSshFsStruct) ParseJob(sshFsCmd *cobra.Command) *cobra.Command {
+	job := &sshFsJob{}
 
-// 	// 读入参数
-// 	sshFsCmd.Flags().StringVar(&job.remotePath, "remotepath", "", "sshfs mount - remote path")
-// 	sshFsCmd.Flags().StringVar(&job.localPath, "localpath", "", "sshfs mount - local mountPath")
+	// 读入参数
+	sshFsCmd.Flags().StringVar(&job.remotePath, "remotepath", "", "sshfs mount - remote path")
+	sshFsCmd.Flags().StringVar(&job.localPath, "localpath", "", "sshfs mount - local mountPath")
 
-// 	sshFsCmd.Run = func(_ *cobra.Command, _ []string) {
-// 		m.doMount(job)
-// 	}
+	sshFsCmd.Run = func(_ *cobra.Command, _ []string) {
+		err := m.doMount(job)
+		if err != nil {
+			fmt.Println("ParseJob error: ", err)
+		}
+	}
 
-// 	return sshFsCmd
-// }
+	return sshFsCmd
+}
 
-// func (m ModJobSshFsStruct) doMount(job *sshFsJob) error {
-// 	if job.localPath == "" || job.remotePath == "" {
-// 		return fmt.Errorf("sshfs mount argument empty")
-// 	}
-// 	// 判断 localPath 是否存在
-// 	if _, err := os.Stat(job.localPath); os.IsNotExist(err) {
-// 		return fmt.Errorf("local path %s does not exist", job.localPath)
-// 	}
+func (m ModJobSshFsStruct) doMount(job *sshFsJob) error {
+	if job.localPath == "" || job.remotePath == "" {
+		return fmt.Errorf("doMount: sshfs mount argument empty")
+	}
 
-// 	// command := []string{"sshfs", job.remotePath, job.localPath, "-o", "reconnect"}
-// 	// if _, err := util.ModRunCmd.NewBuilder(command[0], command[1:]...).WithRoot().ShowProgress().BlockRun(); err != nil {
-// 	// 	return fmt.Errorf("%v exec error", command)
-// 	// }
-// 	currentUser, _ := user.Current()
-// 	addRoot := ""
-// 	if currentUser.Uid != "0" {
-// 		addRoot = "sudo "
-// 	}
-// 	command := addRoot + fmt.Sprintf("sshfs %s %s -o reconnect", job.remotePath, job.localPath)
-// 	util.RunCmdWithTimeoutCheck(command, 1*time.Minute, func(output string) bool { return true })
-// 	return nil
-// }
+	command := []string{"sshfs", job.remotePath, job.localPath, "-o", "reconnect"}
+	currentUser, _ := user.Current()
+	if currentUser.Uid != "0" {
+		command = append([]string{"sudo"}, command...)
+	}
+
+	_, _, err := util.RunCmdWithTimeoutCheck(command, 1*time.Minute, func(output string) bool { return true })
+	if err != nil {
+		return fmt.Errorf("doMount: error mount %s to %s", job.remotePath, job.localPath)
+	}
+	return nil
+}

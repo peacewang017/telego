@@ -133,6 +133,8 @@ func (i *MenuItem) DispatchExec(prefixNodes []*MenuItem) DispatchExecRes {
 			util.Logger.Debugf("DispatchExec match create_new_user_kubeconfig")
 			return i.EnterItemCreateNewUser(prefixNodes)
 			// util.Logger.Warnf("can not find any handler for %s", i)
+		} else {
+			util.Logger.Warnf("can not find any handler for %+v", i)
 		}
 		// else if len(m.Stack) >= 3 && m.Stack[len(m.Stack)-3].Name == "deploy" {
 		// 	if m.ParentNode().Name == "apply" {
@@ -148,6 +150,8 @@ func (i *MenuItem) DispatchExec(prefixNodes []*MenuItem) DispatchExecRes {
 		// } else {
 
 		// }
+	} else {
+		util.Logger.Warnf("can not find any handler for %+v", i)
 	}
 
 	return DispatchExecRes{}

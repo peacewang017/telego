@@ -201,8 +201,10 @@ func Main() {
 		ModJobConfigExporter,
 		ModJobRclone,
 		// ModJobSshFs,
+		ModJobInfraExporterSingle,
 	}
 	for _, mod := range jobmods {
+		fmt.Println("parsing", mod.JobCmdName())
 		rootCmd.AddCommand(mod.ParseJob(&cobra.Command{
 			Use: mod.JobCmdName(),
 		}))

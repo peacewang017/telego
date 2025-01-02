@@ -79,7 +79,7 @@ if not check_ubuntu_version():
     # PROXY_ENV=""
     if os.environ.get("http_proxy"):  
         PROXY_ADDR=os.environ['http_proxy']
-        if PROXY_ADDR.find("127.0.0.1")!=-1:
+        if PROXY_ADDR.find("127.0.0.1")!=-1: 
             del os.environ['http_proxy']
             del os.environ['https_proxy']
             def r():
