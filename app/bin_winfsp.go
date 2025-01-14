@@ -2,6 +2,7 @@ package app
 
 import (
 	"telego/util"
+	"time"
 )
 
 type BinManagerWinfsp struct{}
@@ -10,9 +11,15 @@ func (k BinManagerWinfsp) CheckInstalled() bool {
 	if !util.IsWindows() {
 		return true
 	}
-	_, err := util.ModRunCmd.NewBuilder("rclone", "mount", "D:", "K:").BlockRun()
 
+	cmd, err := util.ModRunCmd.NewBuilder("rclone", "mount", "D:", "K:").AsyncRun()
+	defer cmd.Process.Kill()
 	if err != nil {
+		return false
+	}
+
+	time.Sleep(2 * time.Second)
+	if cmd.Err != nil {
 		return false
 	}
 

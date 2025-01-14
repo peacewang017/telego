@@ -45,7 +45,7 @@ func (w BinMangerWrapper) MakeSureWith() error {
 		printres(res)
 		return res
 	}
-	util.PrintStep("make sure with bin", w.b.BinName()+" already installed")
+	fmt.Println(color.GreenString(w.b.BinName() + " already installed"))
 	return nil
 }
 
