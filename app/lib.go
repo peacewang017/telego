@@ -214,7 +214,7 @@ func Main() {
 		})
 		cmdRunInner := cmd.Run
 		cmd.Run = func(cmd *cobra.Command, args []string) {
-			util.PrintStep("telego start", "starting "+mod.JobCmdName())
+			util.PrintStep("telego start", "starting job: "+mod.JobCmdName())
 			if funk.Contains(PreinitSkipInstallRcloneJobs, mod.JobCmdName()) {
 				util.PrintStep(mod.JobCmdName(), "skip install rclone")
 			} else {
