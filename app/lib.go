@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/thoas/go-funk"
 )
 
 // 菜单节点定义
@@ -107,6 +108,10 @@ func (i *MenuItem) getEmbedScript() string {
 
 var initMenuTreeWg sync.WaitGroup
 
+func WaitInitMenuTree() {
+	initMenuTreeWg.Wait()
+}
+
 // 初始化菜单树ji
 func InitMenuTree(loadSubPrjs bool) *MenuItem {
 	// 解析 YAML 数据
@@ -193,12 +198,6 @@ func Main() {
 		return
 	}
 
-	err = NewBinManager(BinManagerRclone{}).MakeSureWith()
-	if err != nil {
-		fmt.Println(color.RedString("Rclone install failed, err: v%", err))
-		os.Exit(1)
-	}
-
 	parseFail := false
 	var rootCmd = &cobra.Command{
 		// Use: "cmdmode",
@@ -209,10 +208,25 @@ func Main() {
 	}
 
 	for _, mod := range jobmods {
-		fmt.Println("parsing", mod.JobCmdName())
-		rootCmd.AddCommand(mod.ParseJob(&cobra.Command{
+		// fmt.Println("with job:", mod.JobCmdName())
+		cmd := mod.ParseJob(&cobra.Command{
 			Use: mod.JobCmdName(),
-		}))
+		})
+		cmdRunInner := cmd.Run
+		cmd.Run = func(cmd *cobra.Command, args []string) {
+			util.PrintStep("telego start", "starting job: "+mod.JobCmdName())
+			if funk.Contains(PreinitSkipInstallRcloneJobs, mod.JobCmdName()) {
+				util.PrintStep(mod.JobCmdName(), "skip install rclone")
+			} else {
+				err = NewBinManager(BinManagerRclone{}).MakeSureWith()
+				if err != nil {
+					fmt.Println(color.RedString("Rclone install failed, err: v%", err))
+					os.Exit(1)
+				}
+			}
+			cmdRunInner(cmd, args)
+		}
+		rootCmd.AddCommand(cmd)
 	}
 
 	rootCmd.Execute()
@@ -220,8 +234,15 @@ func Main() {
 		return
 	}
 
+	util.PrintStep("telego start", "starting tui menu")
+
 	if util.FileServerAccessible() {
 		checkAndUpgrade()
+		err = NewBinManager(BinManagerRclone{}).MakeSureWith()
+		if err != nil {
+			fmt.Println(color.RedString("Rclone install failed, err: v%", err))
+			os.Exit(1)
+		}
 		if err := NewBinManager(BinManagerKubectl{}).MakeSureWith(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
