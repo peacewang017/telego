@@ -15,6 +15,7 @@ var jobmods = []JobModInterface{
 	ModJobConfigExporter,
 	ModJobRclone,
 	ModJobApplyDist,
-	// ModJobSshFs,
 	ModJobInfraExporterSingle,
+	ModJobMountAllUserStorage,
+	ModJobFilePathServer,
 }

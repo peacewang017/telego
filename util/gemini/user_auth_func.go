@@ -6,6 +6,7 @@ import (
 
 var UserAuthEndpoint = "/gemini/v1/gemini_userauth"
 
+// Gemini http API 包装函数 - UserAuthAPI
 type UserAuthFuncStruct struct {
 	server *GeminiServer
 }

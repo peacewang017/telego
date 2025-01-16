@@ -8,7 +8,8 @@ import (
 )
 
 type GeminiServer struct {
-	BaseURL      string
+	BaseURL string
+
 	UserAuthFunc *UserAuthFuncStruct
 	WebAPIFunc   *WebAPIFuncStruct
 }

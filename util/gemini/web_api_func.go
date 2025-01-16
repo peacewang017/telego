@@ -4,6 +4,7 @@ import "fmt"
 
 var WebAPIEndpoint = "/gemini/v1/gemini_api/gemini_api"
 
+// Gemini http API 包装函数 - WebAPI
 type WebAPIFuncStruct struct {
 	server *GeminiServer
 }
