@@ -231,6 +231,43 @@ func (r SecretConfTypeSshPublic) Template() string {
 	return "# Just the ssh public key content"
 }
 
+// storage_view
+
+type StorageViewYamlModelOneStore struct {
+	Type              string `yaml:"type"`
+	StoreManageServer string `yaml:"storemanage-server"`
+	StoreAccessServer string `yaml:"storeaccess-server"`
+	MountPath         string `yaml:"path"`
+}
+
+// currently we use sftpgo
+type SecretConfTypeStorageViewYaml struct {
+	Storages             map[string]StorageViewYamlModelOneStore `yaml:"storages"`
+	StoreManageAdmin     string                                  `yaml:"storemanage-admin"`
+	StoreManageAdminPass string                                  `yaml:"storemanage-adminpass"`
+}
+
+var _ SecretConfType = SecretConfTypeStorageViewYaml{}
+
+func (r SecretConfTypeStorageViewYaml) SecretConfPath() string {
+	return "storage_view"
+}
+
+func (r SecretConfTypeStorageViewYaml) Template() string {
+	return yamlext.GenerateYAMLTemplate(SecretConfTypeStorageViewYaml{
+		Storages: map[string]StorageViewYamlModelOneStore{
+			"gemini-nm": StorageViewYamlModelOneStore{
+				Type:              "sftpgo",
+				StoreManageServer: "http://xxxx:xxxx",
+				StoreAccessServer: "http://xxxx:xxxx",
+				MountPath:         "/gemini-nm",
+			},
+		},
+		StoreManageAdmin:     "j8k2l9m3n4",
+		StoreManageAdminPass: "p7q5r2s8t1",
+	})
+}
+
 type ConfCacheStruct struct {
 	pub    map[string]string
 	secret map[string]string

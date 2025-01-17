@@ -72,7 +72,7 @@ func NewRcloneConfiger(
 		}() {
 
 			return &RcloneConfiger{
-				Error: fmt.Errorf("不支持的 rclone 配置类型: %v", t),
+				Error: fmt.Errorf("不支持的 rclone ssh 地址: %+v", address),
 			}
 		}
 		return &RcloneConfiger{
@@ -82,12 +82,13 @@ func NewRcloneConfiger(
 		}
 	default:
 		return &RcloneConfiger{
-			Error: fmt.Errorf("不支持的配置类型: %v", t),
+			Error: fmt.Errorf("不支持的配置类型: %+v", t),
 		}
 	}
 }
 
 func (r *RcloneConfiger) WithUser(user, pw string) *RcloneConfiger {
+	fmt.Println(color.GreenString("rclone config with user %s", user))
 	r.User = user
 	r.Password = pw
 	return r
@@ -131,6 +132,7 @@ func (r *RcloneConfiger) DoConfig() error {
 			"pass=" + encryptedPass,
 			"use_insecure_cipher=false",
 		}
+		// fmt.Println(color.GreenString("rclone config create cmds: %+v", cmds))
 		output, err := ModRunCmd.NewBuilder(cmds[0], cmds[1:]...).BlockRun()
 		if err != nil {
 			Logger.Errorf("rclone config create failed: %v with cmds: %v", err, cmds)
@@ -138,7 +140,7 @@ func (r *RcloneConfiger) DoConfig() error {
 				r.Name, host, r.User, port, output, err)
 		}
 	default:
-		return fmt.Errorf("不支持的远程节点类型: %s", r.Type)
+		return fmt.Errorf("不支持的远程节点类型: %+v", r.Type)
 	}
 
 	return nil
@@ -236,4 +238,12 @@ func RcloneSyncFileToFile(localPath string, remotePath string) error {
 	}
 
 	return nil
+}
+
+func RcloneCheckDirExist(remotedir string) bool {
+	_, err := ModRunCmd.NewBuilder("rclone", "lsd", remotedir).BlockRun()
+	if err != nil {
+		return false
+	}
+	return true
 }
