@@ -32,10 +32,7 @@ type GetAllUserStorageLinkRequest struct {
 
 // 返回结构体
 type GetAllUserStorageLinkResponse struct {
-	RemoteInfos []struct {
-		Link    string `json:"link"`    // 远程链接
-		Storage string `json:"storage"` // 存储信息
-	} `json:"remote_infos"` // 用于挂载的远程链接信息
+	RemoteInfos []util.UserMountsInfo `json:"remote_infos"` // 用于挂载的远程链接信息
 }
 
 func (m ModJobMountAllUserStorageStruct) Run() {
@@ -186,23 +183,20 @@ func (m ModJobMountAllUserStorageStruct) Run() {
 	}
 
 	// // 分系统挂载
-	for _, elem := range resp.RemoteInfos {
+	for _, userMountInfo := range resp.RemoteInfos {
 		if runtime.GOOS == "linux" {
-			err := ModJobSshFs.doMount(&sshFsArgv{
-				remotePath: elem.Link,
-				localPath:  path.Join(localRootStorage, elem.Storage),
-			})
-			if err != nil {
-				fmt.Printf("ModJobMountAllUserStorageStruct.Run: linux mount %s to %s error", elem.Link, path.Join(localRootStorage, elem.Storage))
+			// （未确定）
+			sshFsArgv := &sshFsArgv{
+				remotePath: userMountInfo.AccessServer + ":" + userMountInfo.UserStorage_.RootStorage,
+				localPath:  path.Join(localRootStorage, userMountInfo.UserStorage_.Name()),
 			}
+			ModJobSshFs.doMount(sshFsArgv)
+
 		} else if runtime.GOOS == "windows" {
-			err := ModJobRclone.doMount(&rcloneMountArgv{
-				remotePath: elem.Link,
-				localPath:  path.Join(localRootStorage, elem.Storage),
-			})
-			if err != nil {
-				fmt.Printf("ModJobMountAllUserStorageStruct.Run: windows mount %s to %s error", elem.Link, path.Join(localRootStorage, elem.Storage))
-			}
+			rCloneConfiger := util.NewRcloneConfiger(util.RcloneConfigTypeSsh{}, userMountInfo.UserStorage_.Name(), userMountInfo.AccessServer)
+			rCloneConfiger.WithUser(userName, passWord).DoConfig()
+
+			// (未实现)
 		}
 	}
 
