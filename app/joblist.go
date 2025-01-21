@@ -17,5 +17,5 @@ var jobmods = []JobModInterface{
 	ModJobApplyDist,
 	ModJobInfraExporterSingle,
 	ModJobMountAllUserStorage,
-	ModJobGetAllUserStorageLinkServer,
+	ModJobMountAllUserStorageServer,
 }

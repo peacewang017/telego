@@ -9,6 +9,8 @@ import (
 
 var SpaceListEndpoint = "/admin/space/list"
 
+var _ Request = &SpaceListRequest{}
+
 type SpaceListRequest struct {
 	Query  SpaceListRequestQuery
 	Header SpaceListRequestHeader
@@ -27,6 +29,8 @@ type SpaceListRequestHeader struct {
 	TraceID        string
 	AcceptLanguage string
 }
+
+var _ Response = &SpaceListResponse{}
 
 type SpaceListResponse struct {
 	Body SpaceListResponseBody

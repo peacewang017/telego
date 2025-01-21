@@ -283,6 +283,19 @@ func (r SecretConfTypeStorageViewYaml) Template() string {
 	})
 }
 
+// Gemini baseurl
+type SecretConfTypeGeminiBaseUrl struct{}
+
+var _ SecretConfType = SecretConfTypeGeminiBaseUrl{}
+
+func (r SecretConfTypeGeminiBaseUrl) SecretConfPath() string {
+	return "gemini_baseurl"
+}
+
+func (r SecretConfTypeGeminiBaseUrl) Template() string {
+	return "http://127.0.0.1:8002"
+}
+
 type ConfCacheStruct struct {
 	pub    map[string]string
 	secret map[string]string

@@ -10,6 +10,8 @@ import (
 var PasswdLoginEndpoint = "/user/login"
 
 // // PasswdLoginRequest -> http.request
+var _ Request = &PasswdLoginRequest{}
+
 type PasswdLoginRequest struct {
 	Header PasswdLoginRequestHeader
 	Body   PasswdLoginRequestBody
@@ -28,6 +30,8 @@ type PasswdLoginRequestBody struct {
 }
 
 // // http.response -> PasswdLoginResponse
+var _ Response = &PasswdLoginResponse{}
+
 type PasswdLoginResponse struct {
 	Body PasswdLoginResponseBody
 }

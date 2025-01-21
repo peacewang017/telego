@@ -26,13 +26,13 @@ func TestStoreserverSftpgo(t *testing.T) {
 		StoreManageAdmin:     "admin",
 		StoreManageAdminPass: "yourpassword",
 		Storages: map[string]StorageViewYamlModelOneStore{
-			"teststore": StorageViewYamlModelOneStore{
+			"teststore": {
 				Type:              "gemini",
 				StoreManageServer: "http://localhost:8080",
 				StoreAccessServer: "127.0.0.1:2022",
 				MountPath:         "/app",
 			},
-			"teststore2": StorageViewYamlModelOneStore{
+			"teststore2": {
 				Type:              "gemini",
 				StoreManageServer: "http://localhost:8080",
 				StoreAccessServer: "127.0.0.1:2022",

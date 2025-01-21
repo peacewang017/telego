@@ -3,10 +3,12 @@ package util
 import "strings"
 
 type UserOneStorageSet struct {
-	// 对于一个sftp来说，路径名不可能重名，所以可以用作uniqueid
-	// 根据 main_node 上存储名称来，例如 gemini-nm / gemini-sh
-	RootStorage string
-	SubPaths    []string
+	// Type 区分不同的集群
+	// RootStorage 区分集群内不同的存储
+	// SubPaths 区分存储内不同的用户目录
+	Type        string   // "gemini"
+	RootStorage string   // "/gemini-sh"
+	SubPaths    []string // ["user/lzy", "share/fasdfs"]
 }
 
 func (m UserOneStorageSet) Name() string {

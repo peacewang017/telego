@@ -9,6 +9,7 @@ type WebAPIFuncStruct struct {
 	server *GeminiServer
 }
 
+// 获取所有空间列表
 func (fun *WebAPIFuncStruct) SpaceList(req *SpaceListRequest) (*SpaceListResponse, error) {
 	resp, err := fun.server.httpAct(req)
 	if err != nil {
@@ -21,4 +22,19 @@ func (fun *WebAPIFuncStruct) SpaceList(req *SpaceListRequest) (*SpaceListRespons
 	}
 
 	return spaceListResp, nil
+}
+
+// 获取用户加入的空间列表
+func (fun *WebAPIFuncStruct) UserJoinedSpace(req *UserJoinedSpaceRequest) (*UserJoinedSpaceResponse, error) {
+	resp, err := fun.server.httpAct(req)
+	if err != nil {
+		return nil, fmt.Errorf("WebAPIFunc.UserJoinedSpace: %w", err)
+	}
+
+	userJoinedSpaceResp, ok := resp.(*UserJoinedSpaceResponse)
+	if !ok {
+		return nil, fmt.Errorf("WebAPIFunc.UserJoinedSpace: unexpected response type: %T", resp)
+	}
+
+	return userJoinedSpaceResp, nil
 }
