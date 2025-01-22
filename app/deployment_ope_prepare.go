@@ -110,19 +110,19 @@ func DeploymentPreparePyscript(prjdir string, item *DeploymentPrepareItem) error
 
 func DeploymentPrepareUrl(prjdir string, item *DeploymentPrepareItem) error {
 	util.PrintStep("prepare url", fmt.Sprintf("Downloading file from URL: %s", *item.URL))
-	
+
 	// download to download_cache
 	// downloadCachePath := path.Join(PrepareCacheDir, filepath.Base(*item.URL))
 	prjcachedir := path.Join(prjdir, PrepareCacheDir)
 	downloadCachePath := path.Join(prjcachedir, filepath.Base(*item.URL))
 	if _, err := os.Stat(downloadCachePath); err != nil {
-	err := util.DownloadFile(*item.URL, downloadCachePath)
+		err := util.DownloadFile(*item.URL, downloadCachePath)
 		if err != nil {
 			// fmt.Println(color.RedString("Failed to download file from %s\n   err: %v", *item.URL, err))
 			return fmt.Errorf("failed to download file from %s: %w", *item.URL, err)
 		}
 	}
-	return DeploymentPrepareHandleCached(item, prjcachedir)
+	return DeploymentPrepareHandleCached(item, downloadCachePath)
 }
 
 func DeploymentPrepareHandleCached(item *DeploymentPrepareItem, downloadCachePath string) error {
@@ -174,6 +174,7 @@ func DeploymentPrepareHandleCached(item *DeploymentPrepareItem, downloadCachePat
 			// 	return fmt.Errorf("failed to execute transformation %s: %w", item.Trans, err)
 			// }
 		} else if *item.As != "" {
+			fmt.Println(color.BlueString("prepared %s, copy as %s", downloadCachePath, *item.As))
 			util.ModRunCmd.CopyDirContentOrFileTo(downloadCachePath, path.Dir(*item.As))
 			src := path.Join(path.Dir(*item.As), path.Base(downloadCachePath))
 			dest := *item.As

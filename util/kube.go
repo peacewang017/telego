@@ -62,6 +62,7 @@ func GetKubeContextByCluster(clusterName string) string {
 	return ""
 }
 
+// 列出所有集群
 func KubeList() []string {
 	// 获取默认的 kubeconfig 文件路径
 	kubeconfigPath := os.Getenv("KUBECONFIG")
