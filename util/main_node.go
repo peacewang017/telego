@@ -155,16 +155,16 @@ func (r PubConfTypeImgUploaderUrl) Template() string {
 	return "http://127.0.0.1:8002"
 }
 
-// user_storage_server_url
-type PubConfUserStorageServerUrl struct{}
+// mount_all_user_storage_server_url
+type PubConfMountAllUserStorageServerUrl struct{}
 
-var _ PubConfType = PubConfUserStorageServerUrl{}
+var _ PubConfType = PubConfMountAllUserStorageServerUrl{}
 
-func (r PubConfUserStorageServerUrl) PubConfPath() string {
-	return "user_storage_server_url"
+func (r PubConfMountAllUserStorageServerUrl) PubConfPath() string {
+	return "mount_all_user_storage_server_url"
 }
 
-func (r PubConfUserStorageServerUrl) Template() string {
+func (r PubConfMountAllUserStorageServerUrl) Template() string {
 	return "http://127.0.0.1:8002"
 }
 
@@ -284,15 +284,15 @@ func (r SecretConfTypeStorageViewYaml) Template() string {
 }
 
 // Gemini baseurl
-type SecretConfTypeGeminiBaseUrl struct{}
+type SecretConfTypeGeminiAPIUrl struct{}
 
-var _ SecretConfType = SecretConfTypeGeminiBaseUrl{}
+var _ SecretConfType = SecretConfTypeGeminiAPIUrl{}
 
-func (r SecretConfTypeGeminiBaseUrl) SecretConfPath() string {
-	return "gemini_baseurl"
+func (r SecretConfTypeGeminiAPIUrl) SecretConfPath() string {
+	return "gemini_api_url"
 }
 
-func (r SecretConfTypeGeminiBaseUrl) Template() string {
+func (r SecretConfTypeGeminiAPIUrl) Template() string {
 	return "http://127.0.0.1:8002"
 }
 

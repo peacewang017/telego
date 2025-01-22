@@ -65,8 +65,8 @@ func (gServer *GeminiServer) GetAllStorageByUser(username, password string) ([]u
 	passwdLoginReq := &PasswdLoginRequest{
 		Header: PasswdLoginRequestHeader{},
 		Body: PasswdLoginRequestBody{
-			UserName: "gemini",
-			Password: "Gemini123",
+			UserName: username,
+			Password: password,
 		},
 	}
 	passwdLoginResp, err := gServer.UserAuthFunc.PasswdLogin(passwdLoginReq)
@@ -77,7 +77,7 @@ func (gServer *GeminiServer) GetAllStorageByUser(username, password string) ([]u
 		return nil, fmt.Errorf("GeminiServer.GetAllStorageByUser: Authorization failed")
 	}
 
-	// 使用 root 筛选空间
+	// 获取用户所在 spaceID
 	token := passwdLoginResp.Body.Data.Token
 	user_joined_space_req := &UserJoinedSpaceRequest{
 		Header: UserJoinedSpaceRequestHeader{
@@ -97,7 +97,7 @@ func (gServer *GeminiServer) GetAllStorageByUser(username, password string) ([]u
 	storageViewYaml := util.SecretConfTypeStorageViewYaml{}
 	err = yamlext.UnmarshalAndValidate([]byte(storageViewYamlString), &storageViewYaml)
 	if err != nil {
-		return nil, fmt.Errorf("GeminiServer.GetAllStorageByUser: %v", err)
+		return nil, fmt.Errorf("GeminiServer.GetAllStorageByUser: Error unmarshal storageViewYaml: %v", err)
 	}
 
 	for _, storage := range storageViewYaml.Storages {
@@ -105,8 +105,10 @@ func (gServer *GeminiServer) GetAllStorageByUser(username, password string) ([]u
 			thisSubPaths := make([]string, 0)
 			// 待添加
 			thisSubPaths = append(thisSubPaths, "user/"+username)
+			thisSubPaths = append(thisSubPaths, "platform/shared"+username)
 			for _, spaceInfo := range user_joined_space_resp.Body.Data.SpaceList {
-				thisSubPaths = append(thisSubPaths, "share/space/"+spaceInfo.SpaceId)
+				thisSubPaths = append(thisSubPaths, "space_old/"+spaceInfo.SpaceId)
+				thisSubPaths = append(thisSubPaths, "space/"+spaceInfo.SpaceId)
 			}
 
 			storageRet = append(storageRet, util.UserOneStorageSet{
