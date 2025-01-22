@@ -183,6 +183,10 @@ func NewSecretConfType(t string) SecretConfType {
 		return SecretConfTypeSshPrivate{}
 	case SecretConfTypeSshPublic{}.SecretConfPath():
 		return SecretConfTypeSshPublic{}
+	case SecretConfTypeGeminiAPIUrl{}.SecretConfPath():
+		return SecretConfTypeGeminiAPIUrl{}
+	case SecretConfTypeStorageViewYaml{}.SecretConfPath():
+		return SecretConfTypeStorageViewYaml{}
 	default:
 		return nil
 	}

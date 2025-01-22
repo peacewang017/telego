@@ -106,11 +106,13 @@ func (m ModJobMountAllUserStorageServerStruct) handleGetPath(c *gin.Context) {
 func (m ModJobMountAllUserStorageServerStruct) listenRequest(port int) {
 	r := gin.Default()
 	r.POST("/mount_all_user_storage_server_url", m.handleGetPath)
-	r.Run(fmt.Sprintf(":%d", port))
+	if err := r.Run(fmt.Sprintf(":%d", port)); err != nil {
+		fmt.Printf("Failed to start server: %v\n", err)
+	}
 }
 
 func (m ModJobMountAllUserStorageServerStruct) Run() {
-	go m.listenRequest(8083)
+	m.listenRequest(8083)
 }
 
 func (m ModJobMountAllUserStorageServerStruct) ParseJob(getAllUserStorageLinkServerCmd *cobra.Command) *cobra.Command {
