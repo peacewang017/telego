@@ -19,7 +19,7 @@ type ModJobMountAllUserStorageServerStruct struct{}
 var ModJobMountAllUserStorageServer ModJobMountAllUserStorageServerStruct
 
 func (m ModJobMountAllUserStorageServerStruct) JobCmdName() string {
-	return "get-all-user-storage-server"
+	return "mount-all-user-storage-server"
 }
 
 func (m ModJobMountAllUserStorageServerStruct) getSftpServerByType(SecretConfTypeStorageViewYaml util.SecretConfTypeStorageViewYaml, sType string) (storeManageServer, storeAccessServer string, err error) {
