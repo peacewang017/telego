@@ -75,9 +75,9 @@ func (m ModJobMountAllUserStorageServerStruct) handleGetPath(c *gin.Context) {
 		return
 	}
 
-	gBaseUrl, err := (util.MainNodeConfReader{}).ReadSecretConf(util.SecretConfTypeGeminiBaseUrl{})
+	gBaseUrl, err := (util.MainNodeConfReader{}).ReadSecretConf(util.SecretConfTypeGeminiAPIUrl{})
 	if err != nil {
-		fmt.Printf("ModJobGetAllUserStorageLinkServerStruct.handleGetPath: Error Read Gemini Baseurl")
+		fmt.Printf("ModJobGetAllUserStorageLinkServerStruct.handleGetPath: Error reading gemini url")
 	}
 
 	gServer, err := gemini.NewGeminiServer(gBaseUrl)
@@ -94,7 +94,7 @@ func (m ModJobMountAllUserStorageServerStruct) handleGetPath(c *gin.Context) {
 	// 返回集群信息，集群存储根目录列表
 	userMountInfos, err := m.doSftp(userStorageSets, req.UserName, req.PassWord)
 	if err != nil {
-		fmt.Printf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error DoSftp: %v", err)
+		fmt.Printf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error doSftp: %v", err)
 	}
 
 	// 返回可挂载列表
@@ -105,7 +105,7 @@ func (m ModJobMountAllUserStorageServerStruct) handleGetPath(c *gin.Context) {
 
 func (m ModJobMountAllUserStorageServerStruct) listenRequest(port int) {
 	r := gin.Default()
-	r.GET("/getalluserstoragelink", m.handleGetPath)
+	r.POST("/mount_all_user_storage_server_url", m.handleGetPath)
 	r.Run(fmt.Sprintf(":%d", port))
 }
 
