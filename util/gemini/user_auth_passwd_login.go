@@ -78,7 +78,7 @@ func (req *PasswdLoginRequest) ToHttpRequest(baseURL string) (*http.Request, err
 
 	httpReq, err := http.NewRequest("POST", fullURL, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return nil, fmt.Errorf("PasswdLoginRequest.httpRequest: error creating new http request")
+		return nil, fmt.Errorf("PasswdLoginRequest.httpRequest: error creating new http request (fullURL: %s)", fullURL)
 	}
 
 	// Header

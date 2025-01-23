@@ -5,6 +5,7 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"telego/util"
 	"telego/util/gemini"
 	"telego/util/storage_interface"
@@ -35,6 +36,22 @@ func (m ModJobMountAllUserStorageServerStruct) getSftpServerByType(SecretConfTyp
 	return
 }
 
+func (m ModJobMountAllUserStorageServerStruct) printfUserStorageSets(userStorageSets []util.UserOneStorageSet) string {
+	var builder strings.Builder
+
+	builder.WriteString("\n--------------------------------------------------\n")
+	for idx, userStorage := range userStorageSets {
+		builder.WriteString(fmt.Sprintf("Storage-%d\n", idx))
+		builder.WriteString(fmt.Sprintf("type: %s, root-storage: %s\n", userStorage.Type, userStorage.RootStorage))
+		for idx1, subPath := range userStorage.SubPaths {
+			builder.WriteString(fmt.Sprintf("subpath-%d: %s\n", idx1, subPath))
+		}
+	}
+	builder.WriteString("\n--------------------------------------------------\n")
+
+	return builder.String()
+}
+
 func (m ModJobMountAllUserStorageServerStruct) doSftp(userStorageSets []util.UserOneStorageSet, username, password string) ([]util.UserMountsInfo, error) {
 	SecretConfTypeStorageViewYaml := util.SecretConfTypeStorageViewYaml{}
 	SecretConfTypeStorageViewYamlString, err := (util.MainNodeConfReader{}).ReadSecretConf(util.SecretConfTypeStorageViewYaml{})
@@ -61,7 +78,7 @@ func (m ModJobMountAllUserStorageServerStruct) doSftp(userStorageSets []util.Use
 
 	err = util.ModSftpgo.CreateUserSpace(SecretConfTypeStorageViewYaml, username, password, userMountsInfos)
 	if err != nil {
-		return nil, fmt.Errorf("ModJobMountAllUserStorageServerStruct.doSftp: Error CreateUserSpace: %v", err)
+		return nil, fmt.Errorf("ModJobMountAllUserStorageServerStruct.doSftp: Error CreateUserSpace (userStorageSets: %s): %v", m.printfUserStorageSets(userStorageSets), err)
 	}
 	return userMountsInfos, nil
 }
@@ -70,31 +87,44 @@ func (m ModJobMountAllUserStorageServerStruct) handleGetPath(c *gin.Context) {
 	var req GetAllUserStorageLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("Invalid request payload: %v", err),
+			"error": fmt.Sprintf("ModJobMountAllUserStorageServerStruct.handleGetPath: Invalid request payload: %v", err),
 		})
 		return
 	}
 
 	gBaseUrl, err := (util.MainNodeConfReader{}).ReadSecretConf(util.SecretConfTypeGeminiAPIUrl{})
 	if err != nil {
-		fmt.Printf("ModJobGetAllUserStorageLinkServerStruct.handleGetPath: Error reading gemini url")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error reading gemini url: %v", err),
+		})
+		return
 	}
+	gBaseUrl = strings.TrimSpace(gBaseUrl)
 
 	gServer, err := gemini.NewGeminiServer(gBaseUrl)
 	if err != nil {
-		fmt.Printf("ModJobGetAllUserStorageLinkServerStruct.handleGetPath: Error Initialize gemini server")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error initializing gemini server: %v", err),
+		})
+		return
 	}
 
 	// 与 Gemini 交互
 	userStorageSets, err := storage_interface.GetAllStorageByUser(gServer, req.UserName, req.PassWord)
 	if err != nil {
-		fmt.Printf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error GetAllStorageByUser: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error getting all storage by user (username: %s, password: %s): %v", req.UserName, req.PassWord, err),
+		})
+		return
 	}
 
 	// 返回集群信息，集群存储根目录列表
 	userMountInfos, err := m.doSftp(userStorageSets, req.UserName, req.PassWord)
 	if err != nil {
-		fmt.Printf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error doSftp: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("ModJobMountAllUserStorageServerStruct.handleGetPath: Error performing SFTP operations: %v", err),
+		})
+		return
 	}
 
 	// 返回可挂载列表

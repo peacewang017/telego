@@ -140,11 +140,11 @@ func (m ModJobMountAllUserStorageStruct) getLocalRootStorage() (string, error) {
 		// // 检查是否是文件
 		info, err := os.Stat(localRootStorage)
 		if err != nil {
-			return "", fmt.Errorf("ModJobMountAllUserStorageStruct.getLocalRootStorage: Error opening %s\n", localRootStorage)
+			return "", fmt.Errorf("ModJobMountAllUserStorageStruct.getLocalRootStorage: Error opening %s", localRootStorage)
 		}
 
 		if !info.IsDir() {
-			return "", fmt.Errorf("ModJobMountAllUserStorageStruct.getLocalRootStorage: %s is a file, not a directory\n", localRootStorage)
+			return "", fmt.Errorf("ModJobMountAllUserStorageStruct.getLocalRootStorage: %s is a file, not a directory", localRootStorage)
 		}
 
 		files, err := os.ReadDir(localRootStorage)
@@ -178,14 +178,15 @@ func (m ModJobMountAllUserStorageStruct) Run() {
 
 	// 执行请求，拿到 AllUserStorageLink
 	serverUrl, err := (util.MainNodeConfReader{}).ReadPubConf(util.PubConfMountAllUserStorageServerUrl{})
+	serverUrl = strings.TrimSpace(serverUrl)
 	if err != nil {
 		fmt.Printf("ModJobMountAllUserStorageStruct.Run: Get server ip error")
 		return
 	}
 	client := &http.Client{Timeout: 60 * time.Second} // 设置 60 秒超时
-	httpResp, err := client.Post(path.Join(serverUrl, "/mount_all_user_storage_server_url"), "application/json", bytes.NewBuffer(reqBody))
+	httpResp, err := client.Post(util.UrlJoin(serverUrl, "/mount_all_user_storage_server_url"), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
-		fmt.Printf("ModJobMountAllUserStorageStruct.Run: Error getting response")
+		fmt.Printf("ModJobMountAllUserStorageStruct.Run: Error getting response (server_url: %s, fullUrl: %s)", serverUrl, util.UrlJoin(serverUrl, "/mount_all_user_storage_server_url"))
 		return
 	}
 	defer httpResp.Body.Close()
