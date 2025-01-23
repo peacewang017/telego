@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-var UserJoinedSpaceEndpoint = "/admin/user/join/list"
+var UserJoinedSpaceEndpoint = "/user/space/join/list"
 
 var _ Request = &UserJoinedSpaceRequest{}
 

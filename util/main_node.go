@@ -38,6 +38,7 @@ func ReadStrFromMainNode(remotePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	content = strings.TrimSpace(content)
 	return content, nil
 }
 
