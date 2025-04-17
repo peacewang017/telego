@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"time"
 
+	"encoding/base64"
+
 	"github.com/fatih/color"
 	"k8s.io/client-go/util/homedir"
 )
@@ -112,4 +114,33 @@ func IsRoot() bool {
 	}
 
 	return currentUser.Uid == "0"
+}
+
+// CurrentTimeString returns the current time as a formatted string
+// suitable for filenames (YYYY-MM-DD-HHMMSS format)
+func CurrentTimeString() string {
+	return time.Now().Format("2006-01-02-150405")
+}
+
+// IsLinux returns true if the current OS is Linux
+func IsLinux() bool {
+	return runtime.GOOS == "linux"
+}
+
+// IsMacOS returns true if the current OS is macOS
+func IsMacOS() bool {
+	return runtime.GOOS == "darwin"
+}
+
+// WriteFileWithContent writes content to a file with root privileges if needed
+func WriteFileWithContent(path string, content string) error {
+	// Encode content to base64
+	encodedContent := base64.StdEncoding.EncodeToString([]byte(content))
+
+	// Use telego command to execute the job
+	_, err := ModRunCmd.RequireRootRunCmd("telego", "cmd", "--cmd", "app/job_decodebase64_tofile",
+		"--base64", encodedContent,
+		"--path", path,
+		"--mode", "0644")
+	return err
 }
