@@ -8,18 +8,20 @@ script_path = "2.build_and_run.py"
 command_name = "telego"
 
 def create_build_shortcut():
-    """创建1.build_shortcut.py文件，使用准确的Python解释器路径"""
+    """创建脚本快捷方式，使用准确的Python解释器路径"""
     if not os.path.exists(script_path):
         print(f"Error: Script path '{script_path}' does not exist.")
         return False
     
-    build_shortcut_path = "1.build_shortcut.py"
+    # 动态生成快捷方式文件名
+    basename = os.path.splitext(script_path)[0]
+    build_shortcut_path = f"{basename}_shortcut.py"
     
     try:
         # 获取当前Python解释器的路径
         python_interpreter_path = sys.executable
         
-        # 读取1.build.py的内容
+        # 读取源脚本的内容
         with open(script_path, 'r') as source_file:
             source_content = source_file.read()
         
