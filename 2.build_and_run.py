@@ -6,6 +6,7 @@ def os_system(command):
     os.system(command)
 
 # chdir to the directory of the script
+print(f"chdir to {os.path.dirname(os.path.abspath(__file__))}")
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # run the script
