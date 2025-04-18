@@ -86,7 +86,7 @@ func (m ModJobStartFileserverStruct) dispatchMode(job StartFileserverJob) {
 			if !funk.Contains(files, func(file os.DirEntry) bool {
 				return strings.HasPrefix(file.Name(), "telego_")
 			}) {
-				fmt.Println(color.RedString("run start-fileserver under telego project root dir, and make sure already compiled with 2.build.py"))
+				fmt.Println(color.RedString("run start-fileserver under telego project root dir, and make sure already compiled with 1.build.py"))
 				os.Exit(1)
 			}
 

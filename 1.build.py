@@ -133,9 +133,9 @@ CMD ["bash"]
     # run: mount ../telego to /telego, workdir is /telego
     telego_prj_abs=os.path.abspath(".")
     print("building telego at :",telego_prj_abs)
-    # os_system_sure(f"docker run -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py '")
+
     randname="telego_build_"+str(random.randint(10000000,99999999))
-    os_system_sure(f"docker run --name {randname} -it  -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 2.build.py -- privilege'")
+    os_system_sure(f"docker run --name {randname} -it  -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 1.build.py -- privilege'")
     # remove container
     os_system_sure(f"docker rm -f {randname}")
     # end of call the docker
