@@ -87,6 +87,8 @@ if not check_ubuntu_version():
                 os.environ['https_proxy']=PROXY_ADDR
             recover_proxy=r
             
+    os_system_sure("docker pull ubuntu:18.04")
+
     # 创建dockerfile
     with open("build/Dockerfile", "w") as f:
         f.write(f"""
