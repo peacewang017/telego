@@ -7,20 +7,23 @@ import (
 	"telego/util"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
-type SshPasswdAuthJob struct{}
+type SshPasswdAuthJob struct {
+	Enable bool
+}
 
 type ModJobSshPasswdAuthStruct struct{}
 
 var ModJobSshPasswdAuth ModJobSshPasswdAuthStruct
 
-func (m ModJobSshPasswdAuthStruct) NewCmd(job SshPasswdAuthJob) []string {
-	return []string{"telego", "cmd", "--cmd", "app/job_ssh_passwd_auth"}
-}
-
-func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth() (string, error) {
-	util.PrintStep("ConfigureSshPasswdAuth", "Configuring SSH password authentication")
+func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, error) {
+	action := "Enabling"
+	if !enable {
+		action = "Disabling"
+	}
+	util.PrintStep("ConfigureSshPasswdAuth", fmt.Sprintf("%s SSH password authentication", action))
 
 	// Only support Linux platforms
 	if !util.IsLinux() {
@@ -28,8 +31,8 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth() (string, error) {
 		return "", fmt.Errorf("unsupported operating system")
 	}
 
-	// 1. Update SSH config to allow password authentication
-	backupFile, err := configureSshdConfig()
+	// 1. Update SSH config to allow/disallow password authentication
+	backupFile, err := configureSshdConfig(enable)
 	if err != nil {
 		return "", fmt.Errorf("failed to configure SSH server: %w", err)
 	}
@@ -40,11 +43,10 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth() (string, error) {
 		return backupFile, fmt.Errorf("failed to restart SSH service: %w", err)
 	}
 
-	fmt.Println(color.GreenString("SSH password authentication configured successfully"))
 	return backupFile, nil
 }
 
-func configureSshdConfig() (string, error) {
+func configureSshdConfig(enable bool) (string, error) {
 	sshdConfigPath := "/etc/ssh/sshd_config"
 
 	// Check if file exists
@@ -71,8 +73,14 @@ func configureSshdConfig() (string, error) {
 	// Update configuration settings
 	config := string(content)
 
+	// Set value based on enable parameter
+	value := "yes"
+	if !enable {
+		value = "no"
+	}
+
 	// Update PasswordAuthentication
-	config = updateSshConfigSetting(config, "PasswordAuthentication", "yes")
+	config = updateSshConfigSetting(config, "PasswordAuthentication", value)
 
 	// // Update ChallengeResponseAuthentication if present
 	// config = updateSshConfigSetting(config, "ChallengeResponseAuthentication", "yes")
@@ -137,6 +145,41 @@ func JobSshPasswdAuth(j SshPasswdAuthJob) error {
 		return fmt.Errorf("SSH password authentication is only supported on Linux systems")
 	}
 
-	_, err := ModJobSshPasswdAuth.ConfigureSshPasswdAuth()
+	_, err := ModJobSshPasswdAuth.ConfigureSshPasswdAuth(j.Enable)
 	return err
+}
+
+func (m ModJobSshPasswdAuthStruct) NewCmd(job SshPasswdAuthJob) []string {
+	cmd := []string{"telego", m.JobCmdName()}
+	if !job.Enable {
+		cmd = append(cmd, "--disable")
+	}
+	return cmd
+}
+
+func (m ModJobSshPasswdAuthStruct) JobCmdName() string {
+	return "ssh-passwd-auth"
+}
+
+func (m ModJobSshPasswdAuthStruct) ParseJob(sshPasswdAuthCmd *cobra.Command) *cobra.Command {
+	job := &SshPasswdAuthJob{
+		Enable: true, // Default to enabling password authentication
+	}
+
+	sshPasswdAuthCmd.Flags().BoolVar(&job.Enable, "disable", false, "Disable SSH password authentication instead of enabling it")
+
+	sshPasswdAuthCmd.Run = func(_ *cobra.Command, _ []string) {
+		err := JobSshPasswdAuth(*job)
+		if err != nil {
+			fmt.Println(color.RedString("SSH password authentication configuration failed: %v", err))
+			os.Exit(1)
+		}
+		if job.Enable {
+			fmt.Println(color.GreenString("SSH password authentication enabled successfully"))
+		} else {
+			fmt.Println(color.GreenString("SSH password authentication disabled successfully"))
+		}
+	}
+
+	return sshPasswdAuthCmd
 }
