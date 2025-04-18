@@ -6,8 +6,9 @@ def os_system(command):
     os.system(command)
 
 # chdir to the directory of the script
-print(f"chdir to {os.path.dirname(os.path.abspath(__file__))}")
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+real_path = os.path.dirname(os.path.realpath(__file__))
+print(f"chdir to {real_path} (resolving symlinks)")
+os.chdir(real_path)
 
 # run the script
 os_system("python3 1.build.py")
