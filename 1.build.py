@@ -10,6 +10,8 @@ with open("compile_conf.yml",encoding="utf-8") as f:
     conf=yaml.safe_load(f)
 main_node_ip=conf["main_node_ip"]
 main_node_user=conf["main_node_user"]
+# 读取代理配置，如果不存在则为None
+proxy_config = conf.get("proxy", None)
 
 def cmd_color(string,color):
     color_dict={"red":31,"green":32,"yellow":33,"blue":34,"magenta":35,"cyan":36,"white":37}
@@ -187,6 +189,12 @@ for goos, goarch in targets:
     env["GOARCH"] = goarch
     env["GOMODCACHE"] = "/telego/.cache/gomodcache"
     env["GOCACHE"] = "/telego/.cache/gocache"
+    
+    # 如果配置了代理，设置Go编译环境代理
+    if proxy_config:
+        env["http_proxy"] = proxy_config
+        env["https_proxy"] = proxy_config
+        # env["GOPROXY"] = "https://goproxy.cn,direct"  # 使用中国区Go代理
     
     # 执行命令
     result = subprocess.run(cmd, env=env)
