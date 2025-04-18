@@ -21,11 +21,7 @@ def os_system(command):
         # cmd_str = " ".join(str(arg) for arg in command)
         print(f"执行命令：{command} (使用subprocess)")
         try:
-            result = subprocess.run(command, check=False, text=True, capture_output=True)
-            if result.stdout:
-                print(result.stdout)
-            if result.stderr:
-                print("错误输出:", result.stderr)
+            result = subprocess.run(command, check=False, text=True)
             return result.returncode
         except Exception as e:
             print(f"执行命令时出错: {e}")
