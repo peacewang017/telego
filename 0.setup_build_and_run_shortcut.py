@@ -52,9 +52,10 @@ def create_shortcut(script_path, command_name):
 
     # 创建符号链接
     bin_path = f"/usr/local/bin/{command_name}"
-    try:
+    try:t
         # 获取脚本的绝对路径，确保符号链接正确
         abs_script_path = os.path.abspath(script_path)
+        print(f"creating shortcut {abs_script_path} to {bin_path}")
         subprocess.run(['sudo', 'ln', '-s', abs_script_path, bin_path], check=True)
         print(f"Shortcut '{command_name}' created successfully, pointing to {abs_script_path}")
     except subprocess.CalledProcessError as e:
