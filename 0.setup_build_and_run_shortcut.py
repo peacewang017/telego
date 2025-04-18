@@ -52,7 +52,7 @@ def create_shortcut(script_path, command_name):
 
     # 创建符号链接
     bin_path = f"/usr/local/bin/{command_name}"
-    try:t
+    try:
         # 获取脚本的绝对路径，确保符号链接正确
         abs_script_path = os.path.abspath(script_path)
         print(f"creating shortcut {abs_script_path} to {bin_path}")
