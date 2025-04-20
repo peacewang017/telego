@@ -63,7 +63,7 @@ func configureSshdConfig(enable bool) (string, error) {
 
 	// Create backup
 	backupPath := sshdConfigPath + ".bak." + util.CurrentTimeString()
-	err = os.WriteFile(backupPath, content, 0644)
+	err = util.WriteFileWithContent(backupPath, string(content))
 	if err != nil {
 		return "", fmt.Errorf("failed to create backup: %w", err)
 	}
