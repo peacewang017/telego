@@ -150,11 +150,7 @@ func JobSshPasswdAuth(j SshPasswdAuthJob) error {
 }
 
 func (m ModJobSshPasswdAuthStruct) NewCmd(job SshPasswdAuthJob) []string {
-	cmd := []string{"telego", m.JobCmdName()}
-	if !job.Enable {
-		cmd = append(cmd, "--disable")
-	}
-	return cmd
+	return []string{"telego", m.JobCmdName(), "--enable", fmt.Sprintf("%t", job.Enable)}
 }
 
 func (m ModJobSshPasswdAuthStruct) JobCmdName() string {
@@ -162,11 +158,11 @@ func (m ModJobSshPasswdAuthStruct) JobCmdName() string {
 }
 
 func (m ModJobSshPasswdAuthStruct) ParseJob(sshPasswdAuthCmd *cobra.Command) *cobra.Command {
-	job := &SshPasswdAuthJob{
-		Enable: true, // Default to enabling password authentication
-	}
+	job := &SshPasswdAuthJob{}
 
-	sshPasswdAuthCmd.Flags().BoolVar(&job.Enable, "disable", false, "Disable SSH password authentication instead of enabling it")
+	// Add the enable flag and make it required
+	sshPasswdAuthCmd.Flags().BoolVar(&job.Enable, "enable", false, "Required. Set to true to enable SSH password authentication or false to disable it")
+	sshPasswdAuthCmd.MarkFlagRequired("enable")
 
 	sshPasswdAuthCmd.Run = func(_ *cobra.Command, _ []string) {
 		err := JobSshPasswdAuth(*job)
