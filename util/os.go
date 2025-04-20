@@ -133,14 +133,14 @@ func IsMacOS() bool {
 }
 
 // WriteFileWithContent writes content to a file with root privileges if needed
-func WriteFileWithContent(path string, content string) error {
+func WriteFileWithContent(path string, content string) (string, error) {
 	// Encode content to base64
 	encodedContent := base64.StdEncoding.EncodeToString([]byte(content))
 
 	// Use telego command to execute the job
-	_, err := ModRunCmd.RequireRootRunCmd("telego", "decode-base64-to-file",
+	output, err := ModRunCmd.RequireRootRunCmd("telego", "decode-base64-to-file",
 		"--base64", encodedContent,
 		"--path", path,
 		"--mode", "0644")
-	return err
+	return output, err
 }
