@@ -23,7 +23,7 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, 
 	if !enable {
 		action = "Disabling"
 	}
-	util.PrintStep("ConfigureSshPasswdAuth", fmt.Sprintf("%s SSH password authentication", action))
+	util.PrintStep("JobSshPasswdAuth ConfigureSshPasswdAuth", fmt.Sprintf("%s SSH password authentication", action))
 
 	// Only support Linux platforms
 	if !util.IsLinux() {
@@ -68,7 +68,7 @@ func configureSshdConfig(enable bool) (string, error) {
 		return "", fmt.Errorf("failed to create backup, err:%w, output:%s", err, output)
 	}
 
-	util.PrintStep("ConfigureSshdConfig", fmt.Sprintf("Created backup at %s", backupPath))
+	util.PrintStep("JobSshPasswdAuth ConfigureSshdConfig", fmt.Sprintf("Created backup at %s", backupPath))
 
 	// Update configuration settings
 	config := string(content)
@@ -119,7 +119,7 @@ func updateSshConfigSetting(config, setting, value string) string {
 }
 
 func restartSshService() error {
-	util.PrintStep("RestartSshService", "Restarting SSH service")
+	util.PrintStep("JobSshPasswdAuth RestartSshService", "Restarting SSH service")
 
 	// Try systemctl first (systemd)
 	_, err := util.ModRunCmd.NewBuilder("systemctl", "restart", "sshd").WithRoot().ShowProgress().BlockRun()
