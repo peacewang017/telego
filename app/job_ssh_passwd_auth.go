@@ -89,9 +89,9 @@ func configureSshdConfig(enable bool) (string, error) {
 	// config = updateSshConfigSetting(config, "UsePAM", "yes")
 
 	// Write updated config
-	_, err = util.ModRunCmd.RequireRootRunCmd("bash", "-c", fmt.Sprintf("echo '%s' > %s", config, sshdConfigPath))
+	output, err = util.WriteFileWithContent(sshdConfigPath, config)
 	if err != nil {
-		return backupPath, fmt.Errorf("failed to write updated SSH config: %w", err)
+		return backupPath, fmt.Errorf("failed to write updated SSH config: %w, output: %s", err, output)
 	}
 
 	return backupPath, nil
