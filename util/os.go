@@ -138,7 +138,7 @@ func WriteFileWithContent(path string, content string) error {
 	encodedContent := base64.StdEncoding.EncodeToString([]byte(content))
 
 	// Use telego command to execute the job
-	_, err := ModRunCmd.RequireRootRunCmd("telego", "cmd", "--cmd", "app/job_decodebase64_tofile",
+	_, err := ModRunCmd.RequireRootRunCmd("telego", "decode-base64-to-file",
 		"--base64", encodedContent,
 		"--path", path,
 		"--mode", "0644")

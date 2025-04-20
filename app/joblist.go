@@ -19,4 +19,5 @@ var jobmods = []JobModInterface{
 	ModJobMountAllUserStorage,
 	ModJobMountAllUserStorageServer,
 	ModJobSshPasswdAuth,
+	ModJobDecodeBase64ToFile,
 }

@@ -8,6 +8,7 @@ import (
 	"telego/util"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 type DecodeBase64ToFileJob struct {
@@ -21,10 +22,14 @@ type ModJobDecodeBase64ToFileStruct struct{}
 var ModJobDecodeBase64ToFile ModJobDecodeBase64ToFileStruct
 
 func (m ModJobDecodeBase64ToFileStruct) NewCmd(job DecodeBase64ToFileJob) []string {
-	return []string{"telego", "cmd", "--cmd", "app/job_decodebase64_tofile",
+	return []string{"telego", m.JobCmdName(),
 		"--base64", job.Base64Content,
 		"--path", job.TargetPath,
 		"--mode", job.Mode}
+}
+
+func (m ModJobDecodeBase64ToFileStruct) JobCmdName() string {
+	return "decode-base64-to-file"
 }
 
 func (m ModJobDecodeBase64ToFileStruct) DecodeAndWriteFile(job DecodeBase64ToFileJob) error {
@@ -69,4 +74,29 @@ func (m ModJobDecodeBase64ToFileStruct) DecodeAndWriteFile(job DecodeBase64ToFil
 // Job entry point
 func JobDecodeBase64ToFile(j DecodeBase64ToFileJob) error {
 	return ModJobDecodeBase64ToFile.DecodeAndWriteFile(j)
+}
+
+func (m ModJobDecodeBase64ToFileStruct) ParseJob(decodeBase64Cmd *cobra.Command) *cobra.Command {
+	job := &DecodeBase64ToFileJob{
+		Mode: "0644", // Default mode
+	}
+
+	decodeBase64Cmd.Flags().StringVar(&job.Base64Content, "base64", "", "Base64 encoded content to write")
+	decodeBase64Cmd.Flags().StringVar(&job.TargetPath, "path", "", "Path where to write the decoded content")
+	decodeBase64Cmd.Flags().StringVar(&job.Mode, "mode", "0644", "File mode in octal format (e.g. 0644)")
+
+	// Mark required flags
+	_ = decodeBase64Cmd.MarkFlagRequired("base64")
+	_ = decodeBase64Cmd.MarkFlagRequired("path")
+
+	decodeBase64Cmd.Run = func(_ *cobra.Command, _ []string) {
+		err := JobDecodeBase64ToFile(*job)
+		if err != nil {
+			fmt.Println(color.RedString("Failed to decode and write file: %v", err))
+			os.Exit(1)
+		}
+		fmt.Println(color.GreenString("Successfully wrote file to %s", job.TargetPath))
+	}
+
+	return decodeBase64Cmd
 }
