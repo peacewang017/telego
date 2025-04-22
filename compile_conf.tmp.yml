@@ -19,7 +19,7 @@ menu: # 这个字段不用拷贝，始终使用tmp.yml
         - name: "fetch_admin_kubeconfig"
           comment: "获取管理员all in one kubeconfig"
         - name: "add_tele_host.py"
-          comment: "脚本 - 一键设置电信内部host"
+          comment: "脚本 - 一键设集群内部host域名映射"
         - name: "set_pip_source.py"
           comment: "脚本 - 一键设置pip源"
         - name: "set_rpm_source.py"
