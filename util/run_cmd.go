@@ -8,9 +8,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/thoas/go-funk"
 )
 
@@ -25,6 +27,7 @@ type CmdBuilder struct {
 	errWriters   []io.Writer
 	outWriters   []io.Writer
 	showProgress bool
+	sudoPassword string
 }
 
 func (b *CmdBuilder) Output() string {
@@ -54,7 +57,45 @@ func (b *CmdBuilder) SetEnv(envs ...string) *CmdBuilder {
 	return b
 }
 
+func (b *CmdBuilder) beforeRun() (bool, error) {
+	// Only check for sudo password requirement if command starts with sudo
+	if filepath.Base(b.Cmd.Path) == "sudo" {
+		// Test if sudo requires password
+		testCmd := exec.Command("sudo", "-n", "echo", "helloworld")
+		output, err := testCmd.CombinedOutput()
+		outputStr := string(output)
+		
+		// Check if the output indicates a password is required
+		needPassword := err != nil && strings.Contains(outputStr, "sudo: a password is required")
+		
+		if needPassword {
+			// Clear sudo credentials cache to ensure we prompt for password
+			clearCmd := exec.Command("sudo", "-k")
+			if err := clearCmd.Run(); err != nil {
+				// Just log error but continue even if this fails
+				Logger.Debugf("Failed to clear sudo credentials cache: %v", err)
+			}
+			
+			// Get password using GetPassword function
+			password, ok := GetPassword()
+			if !ok {
+				return false, fmt.Errorf("user cancelled sudo password input")
+			}
+			
+			// Store password for use in run functions
+			b.sudoPassword = password
+			return true, nil
+		}
+	}
+	
+	return false, nil
+}
+
 func (b *CmdBuilder) AsyncRun() (*exec.Cmd, error) {
+	needPassword, err := b.beforeRun()
+	if err != nil {
+		return nil, err
+	}
 
 	errWriter := io.MultiWriter(b.errWriters...)
 	outWriter := io.MultiWriter(b.outWriters...)
@@ -67,7 +108,29 @@ func (b *CmdBuilder) AsyncRun() (*exec.Cmd, error) {
 		b.Cmd.Stderr = errWriter
 	}
 
-	// 启动命令
+	// If sudo needs password, set up stdin pipe
+	if needPassword {
+		stdin, err := b.Cmd.StdinPipe()
+		if err != nil {
+			return nil, fmt.Errorf("error creating stdin pipe: %v", err)
+		}
+		
+		// Start the command
+		if err := b.Cmd.Start(); err != nil {
+			return b.Cmd, fmt.Errorf("error starting command: %v", err)
+		}
+		
+		// Write password to stdin
+		_, err = fmt.Fprintf(stdin, "%s\n", b.sudoPassword)
+		if err != nil {
+			return b.Cmd, fmt.Errorf("error writing to stdin: %v", err)
+		}
+		stdin.Close()
+		
+		return b.Cmd, nil
+	}
+
+	// Normal start without password
 	if err := b.Cmd.Start(); err != nil {
 		return b.Cmd, fmt.Errorf("error starting command: %v", err)
 	}
@@ -75,6 +138,10 @@ func (b *CmdBuilder) AsyncRun() (*exec.Cmd, error) {
 }
 
 func (b *CmdBuilder) BlockRun() (string, error) {
+	needPassword, err := b.beforeRun()
+	if err != nil {
+		return b.outputBuffer.String(), err
+	}
 
 	errWriter := io.MultiWriter(b.errWriters...)
 	outWriter := io.MultiWriter(b.outWriters...)
@@ -87,12 +154,39 @@ func (b *CmdBuilder) BlockRun() (string, error) {
 		b.Cmd.Stderr = errWriter
 	}
 
-	// 启动命令
+	// If sudo needs password, set up stdin pipe
+	if needPassword {
+		stdin, err := b.Cmd.StdinPipe()
+		if err != nil {
+			return b.outputBuffer.String(), fmt.Errorf("error creating stdin pipe: %v", err)
+		}
+		
+		// Start the command
+		if err := b.Cmd.Start(); err != nil {
+			return b.outputBuffer.String(), fmt.Errorf("error starting command: %v", err)
+		}
+		
+		// Write password to stdin
+		_, err = fmt.Fprintf(stdin, "%s\n", b.sudoPassword)
+		if err != nil {
+			return b.outputBuffer.String(), fmt.Errorf("error writing to stdin: %v", err)
+		}
+		stdin.Close()
+		
+		// Wait for command to complete
+		if err := b.Cmd.Wait(); err != nil {
+			return b.outputBuffer.String(), fmt.Errorf("error waiting for command: %v", err)
+		}
+		
+		return b.outputBuffer.String(), nil
+	}
+
+	// Normal start without password
 	if err := b.Cmd.Start(); err != nil {
 		return b.outputBuffer.String(), fmt.Errorf("error starting command: %v", err)
 	}
 
-	// 等待命令执行完成
+	// Wait for command to complete
 	if err := b.Cmd.Wait(); err != nil {
 		return b.outputBuffer.String(), fmt.Errorf("error waiting for command: %v", err)
 	}

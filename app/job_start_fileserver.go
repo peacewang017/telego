@@ -91,10 +91,8 @@ func (m ModJobStartFileserverStruct) dispatchMode(job StartFileserverJob) {
 			}
 
 			// ssh to main node and start the fileserver
-			ok, mainnodePw := util.StartTemporaryInputUI(color.GreenString(
-				"启动 MAIN_NODE 需要输入 MAIN_NODE密码"),
-				"此处键入密码",
-				"回车确认，ctrl+c取消")
+			ok, mainnodePw := util.GetPassword("启动 MAIN_NODE 需要输入 MAIN_NODE密码")
+			
 			if !ok {
 				fmt.Println("User canceled start fileserver")
 				os.Exit(1)

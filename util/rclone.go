@@ -165,17 +165,10 @@ func ConfigMainNodeRcloneIfNeed() {
 	}
 
 	// get environment SSH_PW
-	password, ok := os.LookupEnv("SSH_PW")
-
+	password, ok := GetPassword("使用 rclone 访问 MAIN_NODE 需要 MAIN_NODE 密码，请输入:")
 	if !ok {
-		fmt.Println(color.YellowString("SSH_PW env not fount, need user input"))
-		ok, password = StartTemporaryInputUI(color.GreenString("上传teledeploy/teledeploy_secret需要配置main_node rclone, 请输入 %s:%s 密码:", MainNodeUser, MainNodeIp),
-			"此处键入密码",
-			"(回车确认，ctrl+c取消)")
-		if !ok {
-			fmt.Println("User canceled config rclone")
-			os.Exit(1)
-		}
+		fmt.Println("User canceled config rclone")
+		os.Exit(1)
 	}
 
 	err = NewRcloneConfiger(RcloneConfigTypeSsh{}, MainNodeRcloneName, MainNodeIp).
