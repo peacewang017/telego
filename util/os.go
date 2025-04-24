@@ -144,3 +144,13 @@ func WriteFileWithContent(path string, content string) (string, error) {
 		"--mode", "0644")
 	return output, err
 }
+
+// GetCurrentUser 获取当前进程的用户名
+func GetCurrentUser() string {
+	currentUser, err := user.Current()
+	if err != nil {
+		Logger.Warnf("Error retrieving current user: %v", err)
+		return "adminuser"
+	}
+	return currentUser.Username
+}

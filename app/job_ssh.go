@@ -23,23 +23,22 @@ type SshMode = int
 
 const (
 	SshModeGenOrGetKey = iota
-	SshModeUpdateKeyToCluster
-	SshModeSetPubkeyOnThisNode
+	SshModeSetupCluster // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
+	SshModeSetupThisNode
 )
 
 type SshJob struct {
-	Mode          SshMode
-	PubkeyEncoded string
+	Mode SshMode
 }
 
 func (s SshJob) ModeString() string {
 	switch s.Mode {
 	case SshModeGenOrGetKey:
 		return "1.gen_or_get_key"
-	case SshModeUpdateKeyToCluster:
-		return "2.update_key_to_cluster"
-	case SshModeSetPubkeyOnThisNode:
-		return "3.set_pubkey_on_this_node"
+	case SshModeSetupCluster:
+		return "2.setup_cluster"
+	case SshModeSetupThisNode:
+		return "3.setup_this_node"
 	default:
 		return "unknown"
 	}
@@ -54,30 +53,26 @@ func (m ModJobSshStruct) JobCmdName() string {
 }
 
 func (m ModJobSshStruct) ParseJob(applyCmd *cobra.Command) *cobra.Command {
-
 	// 绑定命令行标志到结构体字段
 	mode := ""
-	pubkey := ""
 	applyCmd.Flags().StringVar(&mode, "mode", "", "Sub operation of ssh")
-	applyCmd.Flags().StringVar(&pubkey, "pubkey", "", "Pubkey to be set on this node")
 
 	applyCmd.Run = func(_ *cobra.Command, _ []string) {
 		TaskId := 0
 		switch mode {
 		case SshJob{Mode: SshModeGenOrGetKey}.ModeString():
 			TaskId = SshModeGenOrGetKey
-		case SshJob{Mode: SshModeUpdateKeyToCluster}.ModeString():
-			TaskId = SshModeUpdateKeyToCluster
-		case SshJob{Mode: SshModeSetPubkeyOnThisNode}.ModeString():
-			TaskId = SshModeSetPubkeyOnThisNode
+		case SshJob{Mode: SshModeSetupCluster}.ModeString():
+			TaskId = SshModeSetupCluster
+		case SshJob{Mode: SshModeSetupThisNode}.ModeString():
+			TaskId = SshModeSetupThisNode
 		default:
 			fmt.Println(color.RedString("unsupported ssh ope mode: '%s'", mode))
 			os.Exit(1)
 		}
 
 		ModJobSsh.sshLocal(SshJob{
-			Mode:          TaskId,
-			PubkeyEncoded: pubkey,
+			Mode: TaskId,
 		})
 	}
 
@@ -88,16 +83,15 @@ func (m ModJobSshStruct) sshLocal(job SshJob) {
 	switch job.Mode {
 	case SshModeGenOrGetKey:
 		m.genOrGetKey()
-	case SshModeUpdateKeyToCluster:
-		m.updateKeyToCluster()
-	case SshModeSetPubkeyOnThisNode:
-		pubkeyDecoded, err := base64.StdEncoding.DecodeString(job.PubkeyEncoded)
+	case SshModeSetupCluster:
+		m.setupCluster()
+	case SshModeSetupThisNode:
+		pubkey, err := util.MainNodeConfReader{}.ReadSecretConf(util.SecretConfTypeSshPublic{})
 		if err != nil {
-			fmt.Println(color.RedString("decode base64 pubkey failed: %v", err))
+			fmt.Println(color.RedString("read pubkey from main node failed: %v", err))
 			os.Exit(1)
 		}
-		// fmt.Println("decoded pubkey", job.PubkeyEncoded, pubkeyDecoded, string(pubkeyDecoded))
-		m.setPubkeyOnThisNode(string(pubkeyDecoded))
+		m.setupThisNode(pubkey)
 	default:
 		fmt.Println(color.RedString("unsupported ssh ope mode: '%s'", job.Mode))
 		os.Exit(1)
@@ -105,7 +99,7 @@ func (m ModJobSshStruct) sshLocal(job SshJob) {
 }
 
 // 用正则表达式验证公钥格式
-func (m ModJobSshStruct) setPubkeyOnThisNode(pubkey string) {
+func (m ModJobSshStruct) setupThisNode(pubkey string) {
 	pubkey = strings.TrimSpace(pubkey)
 	innerSetPubkeyOnThisNode := func(pubkey string) error {
 		// 校验公钥格式
@@ -280,13 +274,13 @@ func (m ModJobSshStruct) genOrGetKey() {
 			return
 		}
 
-		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPublic{}, string(localpub))
-
 		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPrivate{}, string(localpri))
 	}
 }
 
-func (m ModJobSshStruct) updateKeyToCluster() {
+
+// https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
+func (m ModJobSshStruct) setupCluster() {
 	ok, yamlFilePath := util.StartTemporaryInputUI(color.GreenString(
 		"初始集群配置需要初始集群配置文件 cluster_config.yml"),
 		"此处键入 yaml 配置路径",
@@ -332,22 +326,20 @@ func (m ModJobSshStruct) updateKeyToCluster() {
 		// install telego,
 		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
 			// update authorized_keys
-			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetPubkeyOnThisNode}.ModeString(), encodedPubkey), " "),
+			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
 		clusterConf.Global.SshPasswd,
 	)
 }
 
 func (m ModJobSshStruct) NewSshCmd(
 	sshModeStr string,
-	sshPubKey string,
 ) []string {
 	switch sshModeStr {
 	case SshJob{Mode: SshModeGenOrGetKey}.ModeString(),
-		SshJob{Mode: SshModeUpdateKeyToCluster}.ModeString(),
-		SshJob{Mode: SshModeSetPubkeyOnThisNode}.ModeString():
+		SshJob{Mode: SshModeSetupCluster}.ModeString(),
+		SshJob{Mode: SshModeSetupThisNode}.ModeString():
 		return []string{"telego", "ssh",
-			"--mode", sshModeStr,
-			"--pubkey", sshPubKey}
+			"--mode", sshModeStr}
 	default:
 		fmt.Println(color.RedString("unsupported ssh ope mode: '%s'", sshModeStr))
 		os.Exit(1)
@@ -356,7 +348,7 @@ func (m ModJobSshStruct) NewSshCmd(
 }
 
 func (m ModJobSshStruct) ExecDelegate(sshModeStr string) DispatchExecRes {
-	cmd := ModJobSsh.NewSshCmd(sshModeStr, "")
+	cmd := ModJobSsh.NewSshCmd(sshModeStr)
 	return DispatchExecRes{
 		Exit: true,
 		ExitWithDelegate: func() {

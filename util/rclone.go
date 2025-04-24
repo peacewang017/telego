@@ -215,17 +215,17 @@ func RcloneSyncFileToFile(localPath string, remotePath string) error {
 	}
 	defer os.RemoveAll(tempdir)
 
-	// copy local file to temp dir
-	_, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, path.Join(tempdir, remoteFileName)).ShowProgress().BlockRun()
-	if err != nil {
-		return fmt.Errorf("failed to create temp dir: %v", err)
-	}
-	_, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, path.Join(tempdir, remoteFileName)).ShowProgress().BlockRun()
-	if err != nil {
-		return fmt.Errorf("failed to copy local file to temp dir: %v", err)
-	}
+	// // copy local file to temp dir
+	// _, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, path.Join(tempdir, remoteFileName)).ShowProgress().BlockRun()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create temp dir: %v", err)
+	// }
+	// _, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, path.Join(tempdir, remoteFileName)).ShowProgress().BlockRun()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to copy local file to temp dir: %v", err)
+	// }
 
-	_, err = ModRunCmd.NewBuilder("rclone", "moveto", path.Join(tempdir, remoteFileName), remotePath).ShowProgress().BlockRun()
+	_, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, remotePath).ShowProgress().BlockRun()
 	if err != nil {
 		return fmt.Errorf("failed to move temp file to remote path: %v", err)
 	}

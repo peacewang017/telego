@@ -3,6 +3,7 @@ import hashlib
 import subprocess
 import yaml
 import random
+import sys
 
 curfdir=os.path.dirname(os.path.abspath(__file__))
 os.chdir(curfdir)
@@ -17,30 +18,35 @@ def cmd_color(string,color):
     color_dict={"red":31,"green":32,"yellow":33,"blue":34,"magenta":35,"cyan":36,"white":37}
     return f"\033[{color_dict[color]}m{string}\033[0m"
 
-def os_system_sure(command):
+def run_command(command, check=True):
     BEFORE_RUN_TITLE=cmd_color("执行命令：","blue")
     RUN_FAIL_TITLE=cmd_color(">","blue")+"\n"+cmd_color("命令执行失败：","red")
     RUN_SUCCESS_TITLE=cmd_color(">","blue")+"\n"+cmd_color("命令执行成功：","green")
+    
     print(f"{BEFORE_RUN_TITLE}{command}")
-    code=os.system(command)
-    # result, code = run_command2(command,allow_fail=True)
-    # code=os.system(command)
-    if code != 0:
-        print(f"{RUN_FAIL_TITLE}{command}")
-        exit(1)
-    print(f"{RUN_SUCCESS_TITLE}{command}\n")
-def os_system(command):
-    BEFORE_RUN_TITLE=cmd_color("执行命令：","blue")
-    RUN_FAIL_TITLE=cmd_color("\n命令执行失败：","red")
-    RUN_SUCCESS_TITLE=cmd_color("\n命令执行成功：","green")
-    print(f"{BEFORE_RUN_TITLE}{command}")
-    code=os.system(command)
-    # result =run_command2(command,allow_fail=True)
-    if code != 0:
-        print(f"{RUN_FAIL_TITLE}{command}")
-    else:
+    try:
+        result = subprocess.run(command, shell=True, check=check, text=True, capture_output=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+        if check and result.returncode != 0:
+            print(f"{RUN_FAIL_TITLE}{command}")
+            print(f"错误输出：\n{result.stderr}")
+            sys.exit(1)
         print(f"{RUN_SUCCESS_TITLE}{command}\n")
-    return code
+        return result.returncode == 0
+    except subprocess.CalledProcessError as e:
+        print(f"{RUN_FAIL_TITLE}{command}")
+        print(f"错误输出：\n{e.stderr}")
+        if check:
+            sys.exit(1)
+        return False
+
+def os_system_sure(command):
+    return run_command(command, check=True)
+
+def os_system(command):
+    return run_command(command, check=False)
 
 # 启动时检查是否为docker ubuntu18.04
 def check_ubuntu_version():
@@ -137,7 +143,7 @@ CMD ["bash"]
     print("building telego at :",telego_prj_abs)
 
     randname="telego_build_"+str(random.randint(10000000,99999999))
-    os_system_sure(f"docker run --name {randname} -it  -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 1.build.py -- privilege'")
+    os_system_sure(f"docker run --name {randname} -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 1.build.py -- privilege'")
     # remove container
     os_system_sure(f"docker rm -f {randname}")
     # end of call the docker
@@ -360,3 +366,22 @@ else
 fi
 
 """)
+
+def load_compile_conf():
+    try:
+        with open('compile_conf.yml', 'r') as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        return {}
+
+def set_proxy_from_conf():
+    if not os.environ.get("http_proxy"):
+        conf = load_compile_conf()
+        if conf and 'proxy' in conf:
+            proxy = conf['proxy']
+            os.environ['http_proxy'] = proxy
+            os.environ['https_proxy'] = proxy
+            return True
+    return False
+    # 尝试从配置文件设置代理
+proxy_set = set_proxy_from_conf()

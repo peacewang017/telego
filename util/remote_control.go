@@ -17,10 +17,13 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fatih/color"
 	"github.com/thoas/go-funk"
+	"gopkg.in/yaml.v2"
+	"encoding/base64"
 )
 
 type NodeState struct {
@@ -101,12 +104,62 @@ func GetRemoteArch(hosts []string, usePasswd string) []string {
 	}).([]string)
 }
 
+// 为每个用户创建配置文件
+func createUserConfigs(hosts []string, usePasswd string) error {
+	// 使用 map 对用户进行去重
+	uniqueUsers := make(map[string]bool)
+	for _, host := range hosts {
+		hostsplit := strings.Split(host, "@")
+		if len(hostsplit) != 2 {
+			return fmt.Errorf("invalid host format: %s", host)
+		}
+		uniqueUsers[hostsplit[0]] = true
+	}
+
+	// 为每个唯一用户创建配置文件
+	for user := range uniqueUsers {
+		// 创建用户特定的配置文件
+		userConfig := AdminUserConfig{
+			Username: user,
+			Password: usePasswd,
+		}
+
+		// 创建用户特定的配置文件路径，添加 userconfig_ 前缀
+		userConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
+		
+		// 确保目录存在
+		if err := os.MkdirAll(filepath.Dir(userConfigPath), 0755); err != nil {
+			return fmt.Errorf("error creating config directory for user %s: %w", user, err)
+		}
+
+		// 序列化配置为YAML
+		data, err := yaml.Marshal(userConfig)
+		if err != nil {
+			return fmt.Errorf("error serializing config for user %s: %w", user, err)
+		}
+
+		// 写入文件
+		if err := os.WriteFile(userConfigPath, data, 0600); err != nil {
+			return fmt.Errorf("error writing config for user %s: %w", user, err)
+		}
+	}
+	return nil
+}
+
 // hosts format is {user}@{ip}
 // left usePasswd to "" if you want to use key
 // return output if success
 func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []string {
 	fmt.Println()
 	Logger.Debugf("Starting remote command: %s", remoteCmd)
+
+	// 如果提供了密码，为每个用户创建配置文件
+	if usePasswd != "" {
+		if err := createUserConfigs(hosts, usePasswd); err != nil {
+			Logger.Warnf("Failed to create user configs: %v", err)
+		}
+	}
+
 	runRemoteCommand := func(host string, index int, logFile string, ch chan<- NodeMsg, remote_cmd string) {
 		// 打开日志文件（追加模式），确保在函数退出时关闭文件
 		file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -128,7 +181,39 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			return
 		}
 
-		// cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no", host, remote_cmd)
+		// 1. 准备远程目录
+		prepareDirCmd := fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user)
+		if err := session.Run(prepareDirCmd); err != nil {
+			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
+			return
+		}
+
+		// 2. 配置 rclone
+		rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
+		err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
+			WithUser(user, usePasswd).
+			DoConfig()
+		if err != nil {
+			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error configuring rclone: %v", err), Complete: true}
+			return
+		}
+
+		// 3. 传输配置文件
+		localConfigPath := GetCurUserConfigPath()
+		remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
+		
+		// 使用 rclone 传输文件
+		if err := RcloneSyncFileToFile(localConfigPath, fmt.Sprintf("%s:%s", rcloneName, remoteConfigPath)); err != nil {
+			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error transferring config: %v", err), Complete: true}
+			return
+		}
+
+		// 4. 设置配置文件权限
+		chmodCmd := fmt.Sprintf("chmod 600 %s", remoteConfigPath)
+		if err := session.Run(chmodCmd); err != nil {
+			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error setting config permissions: %v", err), Complete: true}
+			return
+		}
 
 		// 创建管道用于读取 stdout 和 stderr
 		stdoutPipe, _ := session.StdoutPipe()
@@ -152,7 +237,6 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		// 扫描合并后的输出流
 		for scanner.Scan() {
 			line := scanner.Text()
-			// time.Sleep(500 * time.Millisecond) // 模拟延迟
 			ch <- NodeMsg{Index: index, Output: line, Complete: false}
 
 			// 将输出写入日志文件

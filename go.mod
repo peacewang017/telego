@@ -1,15 +1,16 @@
 module telego
 
-go 1.22.0
+go 1.21
 
 toolchain go1.23.2
 
 require (
-	github.com/NVIDIA/go-nvml v0.12.4-0
+	github.com/barweiss/go-tuple v1.1.2
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.0
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/fatih/color v1.18.0
+	github.com/gin-gonic/gin v1.10.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.20.5
@@ -23,13 +24,13 @@ require (
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.31.2
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 )
 
 require (
 	github.com/andybalholm/brotli v1.0.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/barweiss/go-tuple v1.1.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
@@ -38,7 +39,6 @@ require (
 	github.com/charmbracelet/x/term v0.2.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/creack/pty v1.1.24 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
@@ -46,7 +46,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.10.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -62,7 +61,6 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -109,7 +107,6 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
