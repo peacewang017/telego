@@ -7,6 +7,15 @@ import subprocess
 script_path = "2.build_and_run.py"
 command_name = "telego"
 
+def root(cmd):
+    """判断是否为root用户，如果不是则在命令前添加sudo"""
+    if os.geteuid() != 0:
+        if isinstance(cmd, str):
+            return f"sudo {cmd}"
+        elif isinstance(cmd, list):
+            return ["sudo"] + cmd
+    return cmd
+
 def create_build_shortcut():
     """创建脚本快捷方式，使用准确的Python解释器路径"""
     if not os.path.exists(script_path):
@@ -60,10 +69,10 @@ def create_shortcut(script_path, command_name):
         # 先检查并删除现有的符号链接
         if os.path.exists(bin_path) or os.path.islink(bin_path):
             print(f"Removing existing shortcut at {bin_path}")
-            subprocess.run(['sudo', 'rm', '-f', bin_path], check=True)
+            subprocess.run(root(['rm', '-f', bin_path]), check=True)
         
         print(f"Creating shortcut {abs_script_path} to {bin_path}")
-        subprocess.run(['sudo', 'ln', '-s', abs_script_path, bin_path], check=True)
+        subprocess.run(root(['ln', '-s', abs_script_path, bin_path]), check=True)
         print(f"Shortcut '{command_name}' created successfully, pointing to {abs_script_path}")
     except subprocess.CalledProcessError as e:
         print(f"Error: Failed to create shortcut. {e}")
