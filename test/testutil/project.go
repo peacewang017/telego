@@ -1,7 +1,6 @@
-package test
+package testutil
 
 import (
-	// "os"
 	"path/filepath"
 	"runtime"
 	"testing"

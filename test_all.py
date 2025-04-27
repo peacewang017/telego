@@ -5,13 +5,47 @@ import sys
 import subprocess
 import platform
 import yaml
+import shutil
+
+# 处理 compile_conf.yml
+def setup_compile_conf():
+    conf_path = "compile_conf.yml"
+    if os.path.exists(conf_path):
+        # 备份现有文件
+        bak_path = "compile_conf.yml.bak"
+        shutil.move(conf_path, bak_path)
+        print(f"已备份现有配置文件到: {bak_path}")
+    
+    # 创建新的配置文件
+    with open(conf_path, "w") as f:
+        f.write("""# check the config discription
+# https://qcnoe3hd7k5c.feishu.cn/wiki/MoDOw2fxnidARCkE2hKc60jHn8b?fromScene=spaceOverview
+main_node_ip: localhost
+main_node_user: abc
+image_repo_with_prefix: http://localhost:5000
+""")
+    print("已创建新的配置文件")
+
+# 加载代理配置
+def load_proxy_config():
+    try:
+        with open("compile_conf.yml", "r") as f:
+            config = yaml.safe_load(f)
+            return config.get("proxy", "")
+    except Exception as e:
+        print(f"读取代理设置失败: {e}")
+        return ""
+
+# 全局代理配置
+PROXY = load_proxy_config()
 
 # 测试分类
 TESTS = {
     "direct": [
-        "test/test1_build/build_test.go",  # 构建测试
+       
     ],
     "in_docker": [
+        "test/test1_build/build_test.go",  # 构建测试
         "test/test2_build_and_run_shortcut/shortcut_test.go",  # 快捷方式测试
         "test/test3_main_node_config/config_test.go",  # 主节点配置测试
     ]
@@ -64,17 +98,11 @@ def setup_go_environment():
     os.environ["GOMODCACHE"] = os.path.join(os.getcwd(), cache_base, "gomodcache")
     os.environ["GOCACHE"] = os.path.join(os.getcwd(), cache_base, "gocache")
     
-    # 读取 compile_conf.yml 中的代理设置
-    try:
-        with open("compile_conf.yml", "r") as f:
-            config = yaml.safe_load(f)
-            if "proxy" in config:
-                proxy = config["proxy"]
-                os.environ["http_proxy"] = proxy
-                os.environ["https_proxy"] = proxy
-                print(f"已设置代理: {proxy}")
-    except Exception as e:
-        print(f"读取代理设置失败: {e}")
+    # 设置代理
+    if PROXY:
+        os.environ["http_proxy"] = PROXY
+        os.environ["https_proxy"] = PROXY
+        print(f"已设置代理: {PROXY}")
 
 def run_direct_tests():
     """运行直接在主机上执行的测试"""
@@ -87,12 +115,25 @@ def run_in_docker():
     """在 Docker 中运行测试"""
     # 先拉取基础镜像
     print(f"\n拉取基础镜像 {DOCKER_BASE_IMAGE}...")
-    subprocess.run(["docker", "pull", DOCKER_BASE_IMAGE], check=True)
+    result = subprocess.run(["docker", "pull", DOCKER_BASE_IMAGE], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"拉取镜像失败: {result.stderr}")
+        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+    print(result.stdout)
+    
+    # 准备代理环境变量设置
+    proxy_env = ""
+    if PROXY:
+        proxy_env = f"""
+# 设置代理环境变量
+ENV http_proxy={PROXY}
+ENV https_proxy={PROXY}
+"""
     
     # 构建支持 Docker-in-Docker 的测试镜像
     dockerfile = f"""
 FROM {DOCKER_BASE_IMAGE}
-
+{proxy_env}
 # 安装 Go 编译环境依赖
 RUN apk add --no-cache gcc
 RUN apk add --no-cache musl-dev
@@ -101,48 +142,95 @@ RUN apk add --no-cache go
 # 安装 Python 环境
 RUN apk add --no-cache python3
 RUN apk add --no-cache py3-pip
-
-# 安装 Python 依赖
-RUN pip3 install pyyaml
+RUN apk add --no-cache py3-yaml
 """
     with open("Dockerfile.test", "w") as f:
         f.write(dockerfile)
     
     try:
         print(f"\n构建测试镜像 {DOCKER_IMAGE}...")
-        subprocess.run(["docker", "build", "-t", DOCKER_IMAGE, "-f", "Dockerfile.test", "."], check=True)
-        
-        # 获取当前目录的绝对路径
-        current_dir = os.path.abspath(".")
-        
-        # 在 Docker 中运行测试
-        for test in TESTS["in_docker"]:
-            print(f"\n在 Docker 中运行测试: {test}")
-            cmd = [
-                "docker", "run", "--rm",
-                "-v", f"{current_dir}:/telego",
-                "-w", "/telego",
-                "-v", "/var/run/docker.sock:/var/run/docker.sock",  # 挂载 Docker socket
-                DOCKER_IMAGE,
-                "go", "test", "-v", test
-            ]
-            subprocess.run(cmd, check=True)
+        result = subprocess.run(["docker", "build", "-t", DOCKER_IMAGE, "-f", "Dockerfile.test", "."], 
+                              capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"构建镜像失败: {result.stderr}")
+            raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+        print(result.stdout)
     finally:
         # 清理临时文件
         if os.path.exists("Dockerfile.test"):
             os.remove("Dockerfile.test")
+    
+    # 创建测试脚本
+    test_script = """#!/bin/sh
+set -e
+
+echo "Running go mod tidy..."
+go mod tidy
+
+echo "Running tests..."
+"""
+    for test in TESTS["in_docker"]:
+        test_script += f'go test -v {test}\n'
+    
+    with open("docker_test.sh", "w") as f:
+        f.write(test_script)
+    os.chmod("docker_test.sh", 0o755)
+    
+    # 获取当前目录的绝对路径
+    current_dir = os.path.abspath(".")
+    
+    # 在 Docker 中运行测试脚本
+    print("\n在 Docker 中运行测试...")
+    cmd = [
+        "docker", "run", "--rm",
+        "-v", f"{current_dir}:/telego",
+        "-w", "/telego",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock",
+        DOCKER_IMAGE,
+        "/telego/docker_test.sh"
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"测试失败 - 标准输出:\n{result.stdout}")
+        print(f"测试失败 - 错误输出:\n{result.stderr}")
+        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+    print(result.stdout)
+    
+    # 清理测试脚本
+    if os.path.exists("docker_test.sh"):
+        os.remove("docker_test.sh")
 
 def run_tests():
     """运行所有测试"""
     print("开始运行测试...")
     
+    # 设置配置文件
+    setup_compile_conf()
+    
+    # 运行 gen_menu.py
+    print("\n=== 生成菜单配置 ===")
+    try:
+        subprocess.run(["python3", "gen_menu.py"], check=True)
+        print("菜单配置生成成功")
+    except subprocess.CalledProcessError as e:
+        print(f"生成菜单配置失败: {e}")
+        sys.exit(1)
+    
     # 运行直接测试
     print("\n=== 运行直接测试 ===")
-    run_direct_tests()
+    try:
+        run_direct_tests()
+    except subprocess.CalledProcessError as e:
+        print(f"直接测试失败: {e}")
+        sys.exit(1)
     
     # 运行 Docker 测试
     print("\n=== 运行 Docker 测试 ===")
-    run_in_docker()
+    try:
+        run_in_docker()
+    except subprocess.CalledProcessError as e:
+        print(f"Docker 测试失败: {e}")
+        sys.exit(1)
     
     print("\n所有测试完成！")
 
