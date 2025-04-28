@@ -263,7 +263,7 @@ def run_tests():
         print("菜单配置生成成功")
     except subprocess.CalledProcessError as e:
         print(f"生成菜单配置失败: {e}")
-        sys.exit(1)
+        raise Exception(f"生成菜单配置失败: {e}")
     
     # 运行直接测试
     print("\n=== 运行直接测试 ===")
@@ -271,7 +271,8 @@ def run_tests():
         run_direct_tests()
     except subprocess.CalledProcessError as e:
         print(f"直接测试失败: {e}")
-        sys.exit(1)
+        # sys.exit(1)
+        raise Exception(f"直接测试失败: {e}")
     
     # 运行 Docker 测试
     print("\n=== 运行 Docker 测试 ===")
@@ -279,7 +280,7 @@ def run_tests():
         run_in_docker()
     except subprocess.CalledProcessError as e:
         print(f"Docker 测试失败: {e}")
-        sys.exit(1)
+        raise Exception(f"Docker 测试失败: {e}")
     
     print("\n所有测试完成！")
 
@@ -289,7 +290,9 @@ if __name__ == "__main__":
         print("\n所有测试完成！")
     except subprocess.CalledProcessError as e:
         print(f"\n测试失败: {e}")
-        sys.exit(1)
+        # sys.exit(1)
+        raise Exception(f"测试失败: {e}")
     except Exception as e:
         print(f"\n发生错误: {e}")
-        sys.exit(1) 
+        # sys.exit(1)
+        raise Exception(f"发生错误: {e}") 
