@@ -219,6 +219,18 @@ CHECKSUM_FILE = "./dist/checksums.txt"
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
+
+# 设置环境变量
+env = os.environ.copy()
+env["GOMODCACHE"] = "/telego/.cache/gomodcache"
+env["GOCACHE"] = "/telego/.cache/gocache"
+
+# 如果配置了代理，设置Go编译环境代理
+if proxy_config:
+    env["http_proxy"] = proxy_config
+    env["https_proxy"] = proxy_config
+    # env["GOPROXY"] = "https://goproxy.cn,direct"  # 使用中国区Go代理
+
 # 交叉编译目标平台
 targets = [
     ("windows", "amd64"),
@@ -234,6 +246,16 @@ checksums = {}
 
 # 遍历目标平台并进行编译
 for goos, goarch in targets:
+    env["GOOS"] = goos
+    env["GOARCH"] = goarch
+    
+    # 开始之前，先执行 go mod tidy
+    result = subprocess.run(["go", "mod", "tidy"], env=env)
+    if result.returncode != 0:
+        print(f"Failed to run go mod tidy")
+        print(f"Error: output({result.stdout}), err({result.stderr})")
+        sys.exit(1)
+
     output_file = os.path.join(OUTPUT_DIR, f"telego_{goos}_{goarch}")
     if goos == "windows":
         output_file += ".exe"
@@ -248,18 +270,6 @@ for goos, goarch in targets:
         "."
     ]
     
-    # 设置环境变量
-    env = os.environ.copy()
-    env["GOOS"] = goos
-    env["GOARCH"] = goarch
-    env["GOMODCACHE"] = "/telego/.cache/gomodcache"
-    env["GOCACHE"] = "/telego/.cache/gocache"
-    
-    # 如果配置了代理，设置Go编译环境代理
-    if proxy_config:
-        env["http_proxy"] = proxy_config
-        env["https_proxy"] = proxy_config
-        # env["GOPROXY"] = "https://goproxy.cn,direct"  # 使用中国区Go代理
     
     # 执行命令
     result = subprocess.run(cmd, env=env)
@@ -275,7 +285,8 @@ for goos, goarch in targets:
         print(f"SHA-256 checksum for {output_file}: {sha256_hash}")
     else:
         print(f"Failed to build {output_file}")
-        print(f"Error: {result.stderr}")
+        print(f"Error: result({result})")
+        raise Exception(f"Failed to build {output_file}")
 
 # 将校验码保存到文件
 with open(CHECKSUM_FILE, "w") as f:

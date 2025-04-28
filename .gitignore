@@ -8,3 +8,4 @@ compile_conf_gen.go
 1.build_shortcut.py
 2.build_and_run_shortcut.py
 go
+build_context.yml
