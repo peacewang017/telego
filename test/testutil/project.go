@@ -1,4 +1,4 @@
-//go:build test
+
 package testutil
 
 import (
