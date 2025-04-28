@@ -5,12 +5,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"telego/test"
 	"telego/test/testutil"
 )
 
 func TestSSHKeyGeneration(t *testing.T) {
-	projectRoot := test.GetProjectRoot(t)
+	projectRoot := testutil.GetProjectRoot(t)
 
 	// 启动 SSH 测试容器
 	containerID, cleanup := testutil.RunSSHDocker(t)
