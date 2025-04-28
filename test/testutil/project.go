@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -21,10 +22,10 @@ func GetProjectRoot(t *testing.T) string {
 		genMenuPath := filepath.Join(currentDir, "gen_menu.py")
 		setupPath := filepath.Join(currentDir, "0.setup_build_and_run_shortcut.py")
 		
-		genMenuExists := fileExists(genMenuPath)
-		setupExists := fileExists(setupPath)
+		_, genMenuErr := os.Stat(genMenuPath)
+		_, setupErr := os.Stat(setupPath)
 		
-		if genMenuExists && setupExists {
+		if genMenuErr == nil && setupErr == nil {
 			t.Logf("找到项目根目录: %s", currentDir)
 			return currentDir
 		}
@@ -37,14 +38,4 @@ func GetProjectRoot(t *testing.T) string {
 		}
 		currentDir = parentDir
 	}
-}
-
-// fileExists 检查文件是否存在
-func fileExists(path string) bool {
-	_, err := filepath.Abs(path)
-	if err != nil {
-		return false
-	}
-	_, err = filepath.Stat(path)
-	return err == nil
 } 
