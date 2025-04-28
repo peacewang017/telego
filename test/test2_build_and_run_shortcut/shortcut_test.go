@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"telego/test"
+	"telego/test/testutil"
 )
 
 func runCommand(t *testing.T, cmd *exec.Cmd) error {
@@ -75,7 +75,7 @@ func getBinaryName() string {
 }
 
 func TestSetupShortcut(t *testing.T) {
-	projectRoot := test.GetProjectRoot(t)
+	projectRoot := testutil.GetProjectRoot(t)
 
 	// 使用 0.setup_build_and_run_shortcut.py 设置快捷方式
 	cmd := exec.Command("python3", "0.setup_build_and_run_shortcut.py")
@@ -88,7 +88,7 @@ func TestSetupShortcut(t *testing.T) {
 }
 
 func TestVerifyShortcut(t *testing.T) {
-	projectRoot := test.GetProjectRoot(t)
+	projectRoot := testutil.GetProjectRoot(t)
 	binaryName := getBinaryName()
 	binaryPath := filepath.Join(projectRoot, "dist", binaryName)
 
