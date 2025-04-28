@@ -6,8 +6,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -165,15 +163,11 @@ func ConfigMainNodeRcloneIfNeed() {
 	}
 
 	// get environment SSH_PW
-	password, ok := GetPassword("使用 rclone 访问 MAIN_NODE 需要 MAIN_NODE 密码，请输入:")
+	password, ok := GetPassword("使用rclone 远程访问需要配置密码")
 	if !ok {
 		fmt.Println("User canceled config rclone")
 		os.Exit(1)
 	}
-
-	err = NewRcloneConfiger(RcloneConfigTypeSsh{}, MainNodeRcloneName, MainNodeIp).
-		WithUser(MainNodeUser, password).
-		DoConfig()
 
 	err = NewRcloneConfiger(RcloneConfigTypeSsh{}, MainNodeRcloneName, MainNodeIp).
 		WithUser(MainNodeUser, password).
@@ -207,23 +201,12 @@ func RcloneSyncFileToFile(localPath string, remotePath string) error {
 		return fmt.Errorf("local path is a directory: %s", localPath)
 	}
 
-	remoteFileName := filepath.Base(remotePath)
 	// create temp file
 	tempdir, err := os.MkdirTemp("rclone-sync-temp-*", "")
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tempdir)
-
-	// // copy local file to temp dir
-	// _, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, path.Join(tempdir, remoteFileName)).ShowProgress().BlockRun()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create temp dir: %v", err)
-	// }
-	// _, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, path.Join(tempdir, remoteFileName)).ShowProgress().BlockRun()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to copy local file to temp dir: %v", err)
-	// }
 
 	_, err = ModRunCmd.NewBuilder("rclone", "copyto", localPath, remotePath).ShowProgress().BlockRun()
 	if err != nil {

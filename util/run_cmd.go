@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/thoas/go-funk"
 )
 
@@ -77,7 +76,7 @@ func (b *CmdBuilder) beforeRun() (bool, error) {
 			}
 			
 			// Get password using GetPassword function
-			password, ok := GetPassword()
+			password, ok := GetPassword("执行 sudo 命令需要输入密码")
 			if !ok {
 				return false, fmt.Errorf("user cancelled sudo password input")
 			}

@@ -267,7 +267,7 @@ func (m ModJobSshStruct) genOrGetKey() {
 		}
 		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPrivate{}, string(localpri))
 
-		localpub, err := os.ReadFile(ed25519PubFilePath)
+		_, err = os.ReadFile(ed25519PubFilePath)
 		if err != nil {
 			fail = true
 			failInfo = fmt.Sprintf("failed to read local pub key: %v", err)
@@ -319,7 +319,7 @@ func (m ModJobSshStruct) setupCluster() {
 		fmt.Println(color.RedString("read pubkey failed: %v", err))
 		os.Exit(1)
 	}
-	encodedPubkey := base64.StdEncoding.EncodeToString(pubkeybytes)
+	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
 
 	util.StartRemoteCmds(
 		hosts,
