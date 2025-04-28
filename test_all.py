@@ -7,6 +7,55 @@ import platform
 import yaml
 import shutil
 
+# 预声明全局变量
+HOST_PROJECT_DIR = None
+PROJECT_ROOT = None
+
+def find_project_root():
+    """向上查找项目根目录（包含 compile_conf.tmp.yml 的目录）"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        if os.path.exists(os.path.join(current_dir, "compile_conf.tmp.yml")):
+            return current_dir
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir == current_dir:
+            raise RuntimeError("无法找到项目根目录（未找到 compile_conf.tmp.yml）")
+        current_dir = parent_dir
+
+# 检查是否在容器内
+def is_in_container():
+    # 检查 /.dockerenv 文件
+    if os.path.exists('/.dockerenv'):
+        return True
+    
+    # 检查 cgroup
+    try:
+        with open('/proc/1/cgroup', 'r') as f:
+            return 'docker' in f.read()
+    except:
+        return False
+
+# 获取项目根目录
+PROJECT_ROOT = find_project_root()
+print(f"项目根目录：{PROJECT_ROOT}")
+
+# 处理 build_context.yml
+build_context_path = os.path.join(PROJECT_ROOT, "build_context.yml")
+if not is_in_container():
+    # 在主机上，更新 build_context.yml
+    HOST_PROJECT_DIR = PROJECT_ROOT
+    with open(build_context_path, "w") as f:
+        yaml.dump({
+            "HOST_PROJECT_DIR": HOST_PROJECT_DIR
+        }, f, default_flow_style=False)
+    print(f"已更新 build_context.yml：{build_context_path}")
+else:
+    # 在容器内，读取 HOST_PROJECT_DIR
+    with open(build_context_path, "r") as f:
+        build_context = yaml.safe_load(f)
+        HOST_PROJECT_DIR = build_context["HOST_PROJECT_DIR"]
+        print(f"从 build_context.yml 读取到主机项目目录：{HOST_PROJECT_DIR}")
+
 # 处理 compile_conf.yml
 def setup_compile_conf():
     conf_path = "compile_conf.yml"
