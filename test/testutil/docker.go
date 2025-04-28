@@ -1,4 +1,3 @@
-
 package testutil
 
 import (
@@ -72,9 +71,34 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// 启用 SSH 密码认证
 	sshCmd := exec.Command("docker", "exec", containerID, 
 		"telego", "ssh-passwd-auth", "--enable", "true")
-	if err := sshCmd.Run(); err != nil {
-		t.Fatalf("启用 SSH 密码认证失败: %v", err)
+	
+	// 获取命令的输出
+	stdout, err := sshCmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("获取标准输出失败: %v", err)
 	}
+	stderr, err := sshCmd.StderrPipe()
+	if err != nil {
+		t.Fatalf("获取标准错误失败: %v", err)
+	}
+
+	// 启动命令
+	if err := sshCmd.Start(); err != nil {
+		t.Fatalf("启动命令失败: %v", err)
+	}
+
+	// 读取输出
+	stdoutBytes, _ := io.ReadAll(stdout)
+	stderrBytes, _ := io.ReadAll(stderr)
+
+	// 等待命令完成
+	if err := sshCmd.Wait(); err != nil {
+		t.Fatalf("启用 SSH 密码认证失败: %v\n标准输出: %s\n标准错误: %s", 
+			err, string(stdoutBytes), string(stderrBytes))
+	}
+
+	// 输出成功信息
+	t.Logf("SSH 密码认证已启用\n标准输出: %s", string(stdoutBytes))
 
 	// 返回容器 ID 和清理函数
 	return containerID, func() {
