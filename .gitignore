@@ -9,3 +9,5 @@ compile_conf_gen.go
 2.build_and_run_shortcut.py
 go
 build_context.yml
+Dockerfile.test
+compile_conf.yml.bak

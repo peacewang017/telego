@@ -1,9 +1,7 @@
 package test3_main_node_config
 
 import (
-	"os"
 	"os/exec"
-	"path/filepath"
 	"testing"
 	"telego/test/testutil"
 )
@@ -12,7 +10,7 @@ func TestSSHKeyGeneration(t *testing.T) {
 	projectRoot := testutil.GetProjectRoot(t)
 
 	// 启动 SSH 测试容器
-	containerID, cleanup := testutil.RunSSHDocker(t)
+	_, cleanup := testutil.RunSSHDocker(t)
 	defer cleanup()
 
 	// 复制二进制文件到系统目录
