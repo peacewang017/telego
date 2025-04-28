@@ -5,7 +5,57 @@ import yaml
 import random
 import sys
 
-curfdir=os.path.dirname(os.path.abspath(__file__))
+# 预声明全局变量
+HOST_PROJECT_DIR = None
+PROJECT_ROOT = None
+
+def find_project_root():
+    """向上查找项目根目录（包含 compile_conf.tmp.yml 的目录）"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        if os.path.exists(os.path.join(current_dir, "compile_conf.tmp.yml")):
+            return current_dir
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir == current_dir:
+            raise RuntimeError("无法找到项目根目录（未找到 compile_conf.tmp.yml）")
+        current_dir = parent_dir
+
+# 检查是否在容器内
+def is_in_container():
+    # 检查 /.dockerenv 文件
+    if os.path.exists('/.dockerenv'):
+        return True
+    
+    # 检查 cgroup
+    try:
+        with open('/proc/1/cgroup', 'r') as f:
+            return 'docker' in f.read()
+    except:
+        return False
+
+# 获取项目根目录
+PROJECT_ROOT = find_project_root()
+print(f"项目根目录：{PROJECT_ROOT}")
+
+# 处理 build_context.yml
+build_context_path = os.path.join(PROJECT_ROOT, "build_context.yml")
+if not is_in_container():
+    # 在主机上，更新 build_context.yml
+    HOST_PROJECT_DIR = PROJECT_ROOT
+    with open(build_context_path, "w") as f:
+        yaml.dump({
+            "HOST_PROJECT_DIR": HOST_PROJECT_DIR
+        }, f, default_flow_style=False)
+    print(f"已更新 build_context.yml：{build_context_path}")
+else:
+    # 在容器内，读取 HOST_PROJECT_DIR
+    with open(build_context_path, "r") as f:
+        build_context = yaml.safe_load(f)
+        HOST_PROJECT_DIR = build_context["HOST_PROJECT_DIR"]
+        print(f"从 build_context.yml 读取到主机项目目录：{HOST_PROJECT_DIR}")
+
+# 切换到当前脚本所在目录
+curfdir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(curfdir)
 
 # debug current path and filelist
@@ -145,15 +195,14 @@ CMD ["bash"]
     os.chdir("..")
     os.system("rm -rf build")
     
-    # run: mount ../telego to /telego, workdir is /telego
-    telego_prj_abs=os.path.abspath(".")
-    print("building telego at:",telego_prj_abs)
-    print(f"files in {telego_prj_abs}:")
-    for f in os.listdir(telego_prj_abs):
+    # run: mount HOST_PROJECT_DIR to /telego, workdir is /telego
+    print("building telego at:", HOST_PROJECT_DIR)
+    print(f"files in {HOST_PROJECT_DIR}:")
+    for f in os.listdir(HOST_PROJECT_DIR):
         print(f"- {f}")
 
     randname="telego_build_"+str(random.randint(10000000,99999999))
-    os_system_sure(f"docker run --name {randname} -v {telego_prj_abs}:/telego -w /telego telego_build bash -c 'python3 1.build.py -- privilege'")
+    os_system_sure(f"docker run --name {randname} -v {HOST_PROJECT_DIR}:/telego -w /telego telego_build bash -c 'python3 1.build.py -- privilege'")
     # remove container
     os_system_sure(f"docker rm -f {randname}")
     # end of call the docker
