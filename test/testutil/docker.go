@@ -1,21 +1,61 @@
+//go:build test
+
 package testutil
 
 import (
 	"bufio"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	SSH_PORT = 2222  // 非默认 SSH 端口
 )
 
+// BuildContext 构建上下文配置
+type BuildContext struct {
+	HOST_PROJECT_DIR string `yaml:"HOST_PROJECT_DIR"`
+}
+
+// GetHostProjectPath 获取主机项目目录路径
+func GetHostProjectPath(t *testing.T) string {
+	projectRoot := GetProjectRoot(t)
+	buildContextPath := filepath.Join(projectRoot, "build_context.yml")
+	
+	// 读取 build_context.yml
+	data, err := os.ReadFile(buildContextPath)
+	if err != nil {
+		t.Fatalf("读取 build_context.yml 失败: %v", err)
+	}
+	
+	var buildContext BuildContext
+	if err := yaml.Unmarshal(data, &buildContext); err != nil {
+		t.Fatalf("解析 build_context.yml 失败: %v", err)
+	}
+	
+	if buildContext.HOST_PROJECT_DIR == "" {
+		t.Fatal("build_context.yml 中 HOST_PROJECT_DIR 为空")
+	}
+	
+	return buildContext.HOST_PROJECT_DIR
+}
+
 // RunSSHDocker 运行一个用于 SSH 测试的 Docker 容器
 func RunSSHDocker(t *testing.T) (string, func()) {
-	// 拉取并运行 SSH 测试容器
-	cmd := exec.Command("docker", "run", "-d", "-p", "2222:22", "linuxserver/openssh-server")
+	projectRoot := GetProjectRoot(t)
+	hostProjectPath := GetHostProjectPath(t)
+	
+	// 拉取并运行 SSH 测试容器，映射项目目录
+	cmd := exec.Command("docker", "run", "-d", 
+		"-p", "2222:22",
+		"-v", hostProjectPath + ":/telego",
+		"linuxserver/openssh-server")
 	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("启动 SSH 容器失败: %v", err)
@@ -24,6 +64,18 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 等待容器启动
 	time.Sleep(5 * time.Second)
+
+	// 复制二进制文件到容器
+	if err := CopyBinaryToSystem(t, projectRoot); err != nil {
+		t.Fatalf("复制二进制文件到容器失败: %v", err)
+	}
+
+	// 启用 SSH 密码认证
+	sshCmd := exec.Command("docker", "exec", containerID, 
+		"telego", "ssh-passwd-auth", "--enable", "true")
+	if err := sshCmd.Run(); err != nil {
+		t.Fatalf("启用 SSH 密码认证失败: %v", err)
+	}
 
 	// 返回容器 ID 和清理函数
 	return containerID, func() {
