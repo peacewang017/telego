@@ -196,10 +196,10 @@ CMD ["bash"]
     os.system("rm -rf build")
     
     # run: mount HOST_PROJECT_DIR to /telego, workdir is /telego
-    print("building telego at:", HOST_PROJECT_DIR)
-    print(f"files in {HOST_PROJECT_DIR}:")
-    for f in os.listdir(HOST_PROJECT_DIR):
-        print(f"- {f}")
+    print("building telego at host project dir:", HOST_PROJECT_DIR)
+    # print(f"files in {HOST_PROJECT_DIR}:")
+    # for f in os.listdir(HOST_PROJECT_DIR):
+    #     print(f"- {f}")
 
     randname="telego_build_"+str(random.randint(10000000,99999999))
     os_system_sure(f"docker run --name {randname} -v {HOST_PROJECT_DIR}:/telego -w /telego telego_build bash -c 'python3 1.build.py -- privilege'")
