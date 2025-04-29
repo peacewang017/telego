@@ -91,17 +91,82 @@ func (m RemoteControlModel) View() string {
 	return view
 }
 
-// check arch list in os.go Arch{XXX}
-func GetRemoteArch(hosts []string, usePasswd string) []string {
-	results := StartRemoteCmds(hosts, "python3 -c \"import platform; print({'x86_64': 'amd64', 'aarch64': 'arm64', 'armv7l': 'arm32', 'armv6l': 'arm32', 'i386': 'amd32', 'i686': 'amd32', 'ppc64le': 'ppc64le', 'mips': 'mips', 'mipsel': 'mips', 's390x': 's390x', 'riscv64': 'riscv64'}.get(platform.machine().lower(), 'unknown'))\"", usePasswd)
+
+
+// GetRemoteArch 获取远程主机的架构信息
+// hosts: 远程主机列表
+// usePasswd: 密码
+// currentSystems: 每个主机对应的系统类型
+func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType) []string {
+	if len(hosts) != len(currentSystems) {
+		Logger.Errorf("hosts and systems length mismatch: hosts=%d, systems=%d", len(hosts), len(currentSystems))
+		return make([]string, len(hosts))
+	}
+
+	// 为每个主机执行对应的命令
+	results := make([]string, len(hosts))
+	for i, host := range hosts {
+		cmd := currentSystems[i].GetArchCmd()
+		hostResults := StartRemoteCmds([]string{host}, cmd, usePasswd)
+		if len(hostResults) > 0 {
+			// 清理结果
+			result := strings.ToLower(strings.TrimSpace(hostResults[0]))
+			result = strings.ReplaceAll(result, "\n", "")
+			result = strings.ReplaceAll(result, "\r", "")
+			result = strings.ReplaceAll(result, " ", "")
+
+			// 判断架构
+			if result == "aarch64" || result == "arm64" || result == "arm64e" {
+				results[i] = "arm64"
+			} else if result == "x86_64" || result == "amd64" || result == "x64" {
+				results[i] = "amd64"
+			} else {
+				results[i] = "unknown"
+			}
+		} else {
+			results[i] = "unknown"
+		}
+	}
+
 	Logger.Debugf("GetRemoteArch: %v", results)
-	return funk.Map(results, func(result string) string {
-		return strings.ReplaceAll(
-			strings.ReplaceAll(
-				strings.ReplaceAll(result, "\n", ""),
-				"\r", ""),
-			" ", "")
-	}).([]string)
+	return results
+}
+
+// GetRemoteSys 获取远程主机的系统类型
+// hosts: 远程主机列表
+// usePasswd: 密码
+func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
+	// 使用 uname 命令获取系统信息
+	results := StartRemoteCmds(hosts, "uname -s", usePasswd)
+	
+	fmt.Println(color.BlueString("GetRemoteSys raw output: %v", results))
+	Logger.Debugf("GetRemoteSys: %v", results)
+	return funk.Map(results, func(result string) SystemType {
+		// 清理结果
+		result = strings.ToLower(strings.TrimSpace(result))
+		result = strings.ReplaceAll(result, "\n", "")
+		result = strings.ReplaceAll(result, "\r", "")
+		result = strings.ReplaceAll(result, " ", "")
+
+		// 判断系统类型
+		switch result {
+		case "linux":
+			return LinuxSystem{}
+		case "darwin":
+			return DarwinSystem{}
+		case "windows":
+			return WindowsSystem{}
+		default:
+			// 如果 uname 命令失败，尝试使用其他方法
+			// 检查是否存在 Windows 特有的环境变量
+			winCheck := StartRemoteCmds(hosts, "echo %OS%", usePasswd)
+			if len(winCheck) > 0 && strings.Contains(strings.ToLower(winCheck[0]), "windows") {
+				return WindowsSystem{}
+			}
+			// 默认返回 Linux
+			return UnknownSystem{}
+		}
+	}).([]SystemType)
 }
 
 // 为每个用户创建配置文件
@@ -182,6 +247,8 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		}
 
 		// 1. 准备远程目录
+		// PrintStep("StartRemoteCmds", color.BlueString("prepare remote %s secret directory", host))
+		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("prepare remote %s secret directory", host), Complete: false}
 		prepareDirCmd := fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user)
 		if err := session.Run(prepareDirCmd); err != nil {
 			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
@@ -189,6 +256,8 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		}
 
 		// 2. 配置 rclone
+		// PrintStep("StartRemoteCmds", color.BlueString("configure rclone for %s", host))
+		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("configure rclone for %s", host), Complete: false}
 		rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
 		err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
 			WithUser(user, usePasswd).
@@ -199,16 +268,19 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		}
 
 		// 3. 传输配置文件
+		// PrintStep("StartRemoteCmds", color.BlueString("transfer config file to %s", host))
+		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("transfer config file to %s", host), Complete: false}
 		localConfigPath := GetCurUserConfigPath()
 		remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
-		
 		// 使用 rclone 传输文件
+		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("transfer config file to %s", host), Complete: false}
 		if err := RcloneSyncFileToFile(localConfigPath, fmt.Sprintf("%s:%s", rcloneName, remoteConfigPath)); err != nil {
 			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error transferring config: %v", err), Complete: true}
 			return
 		}
 
-		// 4. 设置配置文件权限
+		// // 4. 设置配置文件权限
+		// PrintStep("StartRemoteCmds", color.BlueString("set ssh config permissions for %s", host))
 		chmodCmd := fmt.Sprintf("chmod 600 %s", remoteConfigPath)
 		if err := session.Run(chmodCmd); err != nil {
 			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error setting config permissions: %v", err), Complete: true}

@@ -30,13 +30,17 @@ def os_system(command):
         print(f"不支持的命令类型: {type(command)}")
         return 1
 
+
+
 # chdir to the directory of the script
 real_path = os.path.dirname(os.path.realpath(__file__))
 print(f"chdir to {real_path} (resolving symlinks)")
 os.chdir(real_path)
 
 # run the script
-os_system("python3 1.build.py")
+code=os_system("python3 1.build.py")
+if code != 0:
+    raise Exception("build failed")
 
 # get cursys
 cursys = ""

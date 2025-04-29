@@ -15,6 +15,38 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+// SystemType 系统类型接口
+type SystemType interface {
+	GetArchCmd() string
+}
+
+// LinuxSystem Linux 系统类型
+type LinuxSystem struct{}
+
+func (s LinuxSystem) GetArchCmd() string {
+	return "uname -m"
+}
+
+// WindowsSystem Windows 系统类型
+type WindowsSystem struct{}
+
+func (s WindowsSystem) GetArchCmd() string {
+	return "echo %PROCESSOR_ARCHITECTURE%"
+}
+
+// DarwinSystem macOS 系统类型
+type DarwinSystem struct{}
+
+func (s DarwinSystem) GetArchCmd() string {
+	return "uname -m"
+}
+
+type UnknownSystem struct{}
+
+func (s UnknownSystem) GetArchCmd() string {
+	return ""
+}
+
 func IsWindows() bool {
 	return runtime.GOOS == "windows"
 }

@@ -296,9 +296,40 @@ with open(CHECKSUM_FILE, "w") as f:
 
 print(f"Checksums saved to {CHECKSUM_FILE}")
 
+with open("dist/install.ps1", 'w', encoding='utf-8') as f:
+    f.write(f"""$FILESERVER = "http://{main_node_ip}:8003/bin_telego"
+$TEMP_DIR = "$env:USERPROFILE\\telego_install"
 
+# 创建临时目录
+if (-not (Test-Path $TEMP_DIR)) {{
+    New-Item -ItemType Directory -Path $TEMP_DIR | Out-Null
+}}
 
-with open("dist/install.py", 'w') as f:
+# 下载文件
+$downloadUrl = "$FILESERVER/telego_windows_amd64.exe"
+$outputPath = "$TEMP_DIR\\telego.exe"
+
+Write-Host "正在下载 telego..."
+Invoke-WebRequest -Uri $downloadUrl -OutFile $outputPath
+
+# 检查下载是否成功
+if (Test-Path $outputPath) {{
+    Write-Host "下载完成，正在安装到 System32..."
+    
+    # 复制到 System32
+    Copy-Item -Path $outputPath -Destination "C:\\Windows\\System32\\telego.exe" -Force
+    
+    # 清理临时文件
+    Remove-Item -Path $TEMP_DIR -Recurse -Force
+    
+    Write-Host "安装完成！telego 已安装到 C:\\Windows\\System32\\telego.exe"
+}} else {{
+    Write-Host "下载失败，请检查网络连接或文件服务器状态。"
+    exit 1
+}}
+""")
+
+with open("dist/install.py", 'w', encoding='utf-8') as f:
     f.write(f'FILESERVER="http://{main_node_ip}:8003/bin_telego"'+"""
             
 import os, tempfile, urllib.request

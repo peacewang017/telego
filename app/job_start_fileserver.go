@@ -76,60 +76,7 @@ func (m ModJobStartFileserverStruct) dispatchMode(job StartFileserverJob) {
 	switch job.Mode {
 	case StartFileserverModeCaller:
 		{
-			// check dist dir with telego_* files
-			distDir := filepath.Join(util.GetEntryDir(), "dist")
-			files, err := os.ReadDir(distDir)
-			if err != nil {
-				fmt.Println(color.RedString("read dist dir failed, err: %v", err))
-				os.Exit(1)
-			}
-			if !funk.Contains(files, func(file os.DirEntry) bool {
-				return strings.HasPrefix(file.Name(), "telego_")
-			}) {
-				fmt.Println(color.RedString("run start-fileserver under telego project root dir, and make sure already compiled with 1.build.py"))
-				os.Exit(1)
-			}
-
-			// ssh to main node and start the fileserver
-			mainnodePw,ok := util.GetPassword("启动 MAIN_NODE 需要输入 MAIN_NODE密码")
-			
-			if !ok {
-				fmt.Println("User canceled start fileserver")
-				os.Exit(1)
-			}
-
-			mainNodeHostArr := []string{fmt.Sprintf("%s@%s", util.MainNodeUser, util.MainNodeIp)}
-
-			util.PrintStep("StartFileserver", color.BlueString("getting remote arch"))
-			arch := util.GetRemoteArch(mainNodeHostArr, mainnodePw)[0]
-			switch arch {
-			case util.ArchAmd64, util.ArchArm64:
-				// fmt.Printf("entry dir %s\n", util.GetEntryDir())
-				from := filepath.Join(util.GetEntryDir(), fmt.Sprintf("dist/telego_linux_%s", arch))
-				to := "./"
-				util.PrintStep("StartFileserver", color.BlueString("\ntransfering files (%s)->(%s)", from, to))
-				// fmt.Println(color.BlueString("\ntransfering files (%s)->(%s)", from, to))
-				util.UploadToMainNode(from, to)
-
-				// fmt.Println(color.BlueString("\nstarting fileserver"))
-				util.PrintStep("StartFileserver", color.BlueString("\nstarting fileserver"))
-				remoteCmd0 := fmt.Sprintf("cp ~/telego_linux_%s /usr/bin/telego", arch)
-				remoteCmd1 := "chmod +x /usr/bin/telego"
-				remoteCmd2 := "chown {user} /usr/bin/telego"
-				remoteCmd3 := strings.Join(m.NewStartFileserverCmd(
-					StartFileserverJob{Mode: StartFileserverModeCallee}.ModeString()), " ")
-				util.StartRemoteCmds(
-					mainNodeHostArr,
-					// install telego,
-					fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\" && ", remoteCmd0, remoteCmd0)+
-						fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\" && ", remoteCmd1, remoteCmd1)+
-						fmt.Sprintf("python3 -c \"import os, getpass;user=getpass.getuser();os.system(f'%s' if os.geteuid() == 0 else f'sudo %s')\" && ", remoteCmd2, remoteCmd2)+
-						fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\"", remoteCmd3, remoteCmd3),
-					mainnodePw,
-				)
-			default:
-				fmt.Println(color.RedString("unsupported arch: '%s'", arch))
-			}
+			m.startFileserverCaller()
 
 		}
 	case StartFileserverModeCallee:
@@ -240,6 +187,76 @@ func (m ModJobStartFileserverStruct) ExecDelegate(sshModeStr string) DispatchExe
 			}
 			fmt.Println(color.GreenString("job ssh finished"))
 		},
+	}
+}
+
+func (m ModJobStartFileserverStruct) startFileserverCaller() {
+	// check dist dir with telego_* files
+	distDir := filepath.Join(util.GetEntryDir(), "dist")
+	files, err := os.ReadDir(distDir)
+	if err != nil {
+		fmt.Println(color.RedString("read dist dir failed, err: %v", err))
+		os.Exit(1)
+	}
+	if !funk.Contains(files, func(file os.DirEntry) bool {
+		return strings.HasPrefix(file.Name(), "telego_")
+	}) {
+		fmt.Println(color.RedString("run start-fileserver under telego project root dir, and make sure already compiled with 1.build.py"))
+		os.Exit(1)
+	}
+
+	// ssh to main node and start the fileserver
+	mainnodePw,ok := util.GetPassword("启动 MAIN_NODE 需要输入 MAIN_NODE密码")
+	
+	if !ok {
+		fmt.Println("User canceled start fileserver")
+		os.Exit(1)
+	}
+
+	mainNodeHostArr := []string{fmt.Sprintf("%s@%s", util.MainNodeUser, util.MainNodeIp)}
+
+	util.PrintStep("StartFileserver", color.BlueString("getting remote sys"))
+	remoteSys := util.GetRemoteSys(mainNodeHostArr, mainnodePw)
+	if len(remoteSys) == 0 || funk.Contains(remoteSys, func(sys util.SystemType) bool {
+		_, isUnknown := sys.(util.UnknownSystem)
+		return isUnknown
+	}) {
+		fmt.Println(color.RedString("get remote sys failed"))
+		os.Exit(1)
+	}
+	fmt.Println(color.BlueString("remote sys we got: %v", remoteSys))
+	
+	util.PrintStep("StartFileserver", color.BlueString("getting remote arch"))
+	arch := util.GetRemoteArch(mainNodeHostArr, mainnodePw, remoteSys)[0]
+
+	util.PrintStep("StartFileserver", color.BlueString("choosing fileserver setting mode"))
+	switch arch {
+	case util.ArchAmd64, util.ArchArm64:
+		// fmt.Printf("entry dir %s\n", util.GetEntryDir())
+		from := filepath.Join(util.GetEntryDir(), fmt.Sprintf("dist/telego_linux_%s", arch))
+		to := "./"
+		util.PrintStep("StartFileserver", color.BlueString("\ntransfering files (%s)->(%s)", from, to))
+		// fmt.Println(color.BlueString("\ntransfering files (%s)->(%s)", from, to))
+		util.UploadToMainNode(from, to)
+
+		// fmt.Println(color.BlueString("\nstarting fileserver"))
+		util.PrintStep("StartFileserver", color.BlueString("\nstarting fileserver"))
+		remoteCmd0 := fmt.Sprintf("cp ~/telego_linux_%s /usr/bin/telego", arch)
+		remoteCmd1 := "chmod +x /usr/bin/telego"
+		remoteCmd2 := "chown {user} /usr/bin/telego"
+		remoteCmd3 := strings.Join(m.NewStartFileserverCmd(
+			StartFileserverJob{Mode: StartFileserverModeCallee}.ModeString()), " ")
+		util.StartRemoteCmds(
+			mainNodeHostArr,
+			// install telego,
+			fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\" && ", remoteCmd0, remoteCmd0)+
+				fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\" && ", remoteCmd1, remoteCmd1)+
+				fmt.Sprintf("python3 -c \"import os, getpass;user=getpass.getuser();os.system(f'%s' if os.geteuid() == 0 else f'sudo %s')\" && ", remoteCmd2, remoteCmd2)+
+				fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\"", remoteCmd3, remoteCmd3),
+			mainnodePw,
+		)
+	default:
+		fmt.Println(color.RedString("unsupported arch: '%s'", arch))
 	}
 }
 
