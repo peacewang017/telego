@@ -63,9 +63,17 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// 等待容器启动
 	time.Sleep(5 * time.Second)
 
-	// 复制二进制文件到容器
-	if err := CopyBinaryToSystem(t, projectRoot); err != nil {
-		t.Fatalf("复制二进制文件到容器失败: %v", err)
+	// 检查 PATH 环境变量
+	pathCmd := exec.Command("docker", "exec", containerID, "echo", "$PATH")
+	if err := RunCommand(t, pathCmd); err != nil {
+		t.Fatalf("检查 PATH 失败: %v", err)
+	}
+
+	// 在容器内执行拷贝命令
+	copyCmd := exec.Command("docker", "exec", containerID,
+		"cp", "/telego/dist/telego", "/usr/bin/telego")
+	if err := RunCommand(t, copyCmd); err != nil {
+		t.Fatalf("复制telego二进制文件失败: %v", err)
 	}
 
 	// 启用 SSH 密码认证
@@ -108,6 +116,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 // RunCommand 运行命令并实时输出
 func RunCommand(t *testing.T, cmd *exec.Cmd) error {
+	t.Logf("\n>>> 运行命令: %v", cmd.Args)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

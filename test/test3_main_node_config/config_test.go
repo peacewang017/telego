@@ -13,11 +13,6 @@ func TestSSHKeyGeneration(t *testing.T) {
 	_, cleanup := testutil.RunSSHDocker(t)
 	defer cleanup()
 
-	// 复制二进制文件到系统目录
-	if err := testutil.CopyBinaryToSystem(t, projectRoot); err != nil {
-		t.Fatalf("复制二进制文件失败: %v", err)
-	}
-
 	// 生成 SSH 密钥
 	cmd := exec.Command("telego", "cmd", "--cmd", "/update_config/ssh_config/1.gen_or_get_key")
 	cmd.Dir = projectRoot
