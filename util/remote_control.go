@@ -142,7 +142,8 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 	
 	fmt.Println(color.BlueString("GetRemoteSys raw output: %v", results))
 	Logger.Debugf("GetRemoteSys: %v", results)
-	return funk.Map(results, func(result string) SystemType {
+	
+	remoteSys := funk.Map(results, func(result string) SystemType {
 		// 清理结果
 		result = strings.ToLower(strings.TrimSpace(result))
 		result = strings.ReplaceAll(result, "\n", "")
@@ -151,7 +152,7 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 
 		// 判断系统类型
 		switch result {
-		case "linux":
+		case "linux", "gnu/linux", "gnu":
 			return LinuxSystem{}
 		case "darwin":
 			return DarwinSystem{}
@@ -164,10 +165,15 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 			if len(winCheck) > 0 && strings.Contains(strings.ToLower(winCheck[0]), "windows") {
 				return WindowsSystem{}
 			}
-			// 默认返回 Linux
+			// 其他所有系统都返回 Unknown
 			return UnknownSystem{}
 		}
 	}).([]SystemType)
+	
+	fmt.Println(color.BlueString("GetRemoteSys type: %T", remoteSys))
+	fmt.Println(color.BlueString("GetRemoteSys content: %+v", remoteSys))
+	
+	return remoteSys
 }
 
 // 为每个用户创建配置文件

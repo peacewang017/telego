@@ -111,6 +111,16 @@ WantedBy=multi-user.target
 				ExecStart:        "/usr/bin/python3 -m http.server 8003", // 替换为实际路径和端口
 			}
 
+			// mkdir /teledeploy
+			util.PrintStep("StartFileserver", color.BlueString("mkdir /teledeploy"))
+			util.ModRunCmd.NewBuilder("mkdir", "-p", "/teledeploy").WithRoot().BlockRun()
+
+			
+			// chown to cur user
+			util.PrintStep("StartFileserver", color.BlueString("chown -R %s /teledeploy", util.GetCurrentUser()))
+			curUser := util.GetCurrentUser()
+			util.ModRunCmd.NewBuilder("chown", "-R", curUser, "/teledeploy").WithRoot().BlockRun()
+
 			// 生成服务文件内容
 			serviceFilePath := "/etc/systemd/system/python-fileserver.service"
 			file, err := os.Create(serviceFilePath)
@@ -221,7 +231,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		_, isUnknown := sys.(util.UnknownSystem)
 		return isUnknown
 	}) {
-		fmt.Println(color.RedString("get remote sys failed"))
+		fmt.Println(color.RedString("get remote sys failed %+v", remoteSys))
 		os.Exit(1)
 	}
 	fmt.Println(color.BlueString("remote sys we got: %v", remoteSys))
@@ -255,6 +265,16 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 				fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\"", remoteCmd3, remoteCmd3),
 			mainnodePw,
 		)
+
+		// try request http fileserver http://{MAIN_NODE_IP}:8003
+		util.PrintStep("StartFileserver", color.BlueString("checking fileserver"))
+		_,err:=util.HttpGetUrlContent(fmt.Sprintf("http://%s:8003", util.MainNodeIp))
+		if err != nil {
+			fmt.Println(color.RedString("fileserver not started, err: %v", err))
+			os.Exit(1)
+		}
+		fmt.Println(color.GreenString("fileserver started"))
+
 	default:
 		fmt.Println(color.RedString("unsupported arch: '%s'", arch))
 	}
