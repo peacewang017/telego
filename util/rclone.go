@@ -202,7 +202,7 @@ func RcloneSyncFileToFile(localPath string, remotePath string) error {
 	}
 
 	// create temp file
-	tempdir, err := os.MkdirTemp("rclone-sync-temp-*", "")
+	tempdir, err := os.MkdirTemp("", "rclone-sync-temp-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %v", err)
 	}
