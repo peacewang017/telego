@@ -50,7 +50,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// projectRoot := GetProjectRoot(t)
 	hostProjectPath := GetHostProjectPath(t)
 
-	// 拉取并运行 Python 镜像，安装 SSH 服务并映射项目目录
+	// 拉取并运行 Python 镜像，映射项目目录
 	cmd := exec.Command("docker", "run", "-d",
 		"-p", "2222:22",
 		"-v", hostProjectPath+":/telego",
@@ -61,21 +61,31 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 	containerID := string(output[:12])
 
-	// 等待容器启动
-	time.Sleep(5 * time.Second)
+	// 等待容器就绪 - 鲁棒的方式
+	maxAttempts := 50                       // 最多尝试30次
+	waitInterval := 1000 * time.Millisecond // 每次等待0.5秒
+	var ready bool
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		pathCmd := exec.Command("docker", "exec", containerID, "echo", "Container is ready")
+		if err := pathCmd.Run(); err == nil {
+			ready = true
+			t.Logf("容器就绪，第 %d 次尝试成功", attempt)
+			break
+		}
+		t.Logf("等待容器就绪...尝试 %d/%d", attempt, maxAttempts)
+		time.Sleep(waitInterval)
+	}
+
+	if !ready {
+		t.Fatalf("容器启动超时，在 %d 次尝试后仍未就绪", maxAttempts)
+	}
 
 	// 检查 PATH 环境变量
 	pathCmd := exec.Command("docker", "exec", containerID, "echo", "$PATH")
 	if err := RunCommand(t, pathCmd); err != nil {
 		t.Fatalf("检查 PATH 失败: %v", err)
 	}
-
-	// // 安装 SSH 服务
-	// installSSHCmd := exec.Command("docker", "exec", containerID,
-	// 	"bash", "-c", "apt-get update && apt-get install -y openssh-server && mkdir -p /var/run/sshd && echo 'root:password' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && service ssh start")
-	// if err := RunCommand(t, installSSHCmd); err != nil {
-	// 	t.Fatalf("安装SSH服务失败: %v", err)
-	// }
 
 	// 在容器内执行拷贝命令
 	copyCmd := exec.Command("docker", "exec", containerID,
