@@ -114,6 +114,13 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		t.Fatalf("复制telego二进制文件失败: %v", err)
 	}
 
+	// 在容器内执行 Python 脚本
+	scriptCmd := exec.Command("docker", "exec", containerID,
+		"python3", "/telego/scripts/systemctl_docker.py")
+	if err := RunCommand(t, scriptCmd); err != nil {
+		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
+	}
+
 	// 启用 SSH 密码认证
 	sshCmd := exec.Command("docker", "exec", containerID,
 		"telego", "ssh-passwd-auth", "--enable", "true")
@@ -145,13 +152,6 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 输出成功信息
 	t.Logf("SSH 密码认证已启用\n标准输出: %s", string(stdoutBytes))
-
-	// 在容器内执行 Python 脚本
-	scriptCmd := exec.Command("docker", "exec", containerID,
-		"python", "/telego/scripts/systemctl_docker.py")
-	if err := RunCommand(t, scriptCmd); err != nil {
-		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
-	}
 
 	// 返回容器 ID 和清理函数
 	return containerID, func() {
