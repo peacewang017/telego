@@ -50,28 +50,14 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// projectRoot := GetProjectRoot(t)
 	hostProjectPath := GetHostProjectPath(t)
 
-	// 拉取Python镜像并检查是否可用
-	pullCmd := exec.Command("docker", "pull", "python:3.12.5")
-	err := RunCommand(t, pullCmd)
-	if err != nil {
-		// 检查镜像是否已经存在
-		checkCmd := exec.Command("docker", "image", "inspect", "python:3.12.5")
-		if checkErr := checkCmd.Run(); checkErr != nil {
-			// 镜像既不能拉取也不存在，测试无法继续
-			t.Fatalf("拉取Python镜像失败，且本地无可用镜像: %v", err)
-		}
-		t.Logf("拉取Python镜像失败，但本地有可用镜像，继续测试: %v", err)
-	}
-
-	// 拉取并运行 Python 镜像，映射项目目录
+	// 拉取并运行构建镜像，映射项目目录
 	cmd := exec.Command("docker", "run", "-d",
 		"-p", "2222:22",
 		"-v", hostProjectPath+":/telego",
-		"python:3.12.5",
-		"tail", "-f", "/dev/null")
+		"telego_build")
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("启动 Python 容器失败: %v", err)
+		t.Fatalf("启动容器失败: %v", err)
 	}
 	containerID := string(output[:12])
 
@@ -93,6 +79,24 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	if !ready {
 		t.Fatalf("容器启动超时，在 %d 次尝试后仍未就绪", maxAttempts)
+	}
+
+	// 安装SSH服务器
+	installSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
+		"apt-get update && apt-get install -y openssh-server && mkdir -p /run/sshd")
+	if err := RunCommand(t, installSSHCmd); err != nil {
+		t.Fatalf("安装SSH服务器失败: %v", err)
+	}
+
+	// 配置SSH服务器和创建用户
+	configSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
+		"echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "+
+			"echo 'root:password' | chpasswd && "+
+			"adduser --gecos '' --disabled-password abc && "+
+			"echo 'abc:abc' | chpasswd && "+
+			"/usr/sbin/sshd")
+	if err := RunCommand(t, configSSHCmd); err != nil {
+		t.Fatalf("配置SSH服务器失败: %v", err)
 	}
 
 	// 检查 PATH 环境变量
