@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -71,7 +72,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 在容器内执行拷贝命令
 	copyCmd := exec.Command("docker", "exec", containerID,
-		"cp", "/telego/dist/telego", "/usr/bin/telego")
+		"cp", fmt.Sprintf("/telego/dist/%s", GetBinaryName()), "/usr/bin/telego")
 	if err := RunCommand(t, copyCmd); err != nil {
 		t.Fatalf("复制telego二进制文件失败: %v", err)
 	}
