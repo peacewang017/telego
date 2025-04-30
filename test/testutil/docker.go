@@ -54,7 +54,9 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	cmd := exec.Command("docker", "run", "-d",
 		"-p", "2222:22",
 		"-v", hostProjectPath+":/telego",
-		"telego_build")
+		"telego_build",
+		"tail", "-f", "/dev/null")
+
 	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("启动容器失败: %v", err)
