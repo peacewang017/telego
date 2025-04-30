@@ -46,7 +46,7 @@ func GetHostProjectPath(t *testing.T) string {
 
 // RunSSHDocker 运行一个用于 SSH 测试的 Docker 容器
 func RunSSHDocker(t *testing.T) (string, func()) {
-	projectRoot := GetProjectRoot(t)
+	// projectRoot := GetProjectRoot(t)
 	hostProjectPath := GetHostProjectPath(t)
 	
 	// 拉取并运行 SSH 测试容器，映射项目目录

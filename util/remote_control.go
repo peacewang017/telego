@@ -236,93 +236,134 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 		file.WriteString(fmt.Sprintf("Running command on host %s:\n  %s\n", host, remote_cmd))
 
-		// 模拟运行远程指令，实际可以替换为 SSH 或其他工具
+		// 获取主机信息
 		hostsplit := strings.Split(host, "@")
 		user := hostsplit[0]
 		server := hostsplit[1]
-		client, session, err := sshSession(server, user, usePasswd)
-		if err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
-			return
-		}
 
 		// 1. 准备远程目录
-		// PrintStep("StartRemoteCmds", color.BlueString("prepare remote %s secret directory", host))
 		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("prepare remote %s secret directory", host), Complete: false}
-		prepareDirCmd := fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user)
-		if err := session.Run(prepareDirCmd); err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
-			return
+		{
+			client, session, err := sshSession(server, user, usePasswd)
+			if err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
+				return
+			}
+			defer client.Close()
+			defer session.Close()
+
+			prepareDirCmd := fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user)
+			if err := session.Run(prepareDirCmd); err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
+				return
+			}
 		}
 
 		// 2. 配置 rclone
-		// PrintStep("StartRemoteCmds", color.BlueString("configure rclone for %s", host))
 		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("configure rclone for %s", host), Complete: false}
-		rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
-		err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
-			WithUser(user, usePasswd).
-			DoConfig()
-		if err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error configuring rclone: %v", err), Complete: true}
-			return
+		{
+			client, session, err := sshSession(server, user, usePasswd)
+			if err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
+				return
+			}
+			defer client.Close()
+			defer session.Close()
+
+			rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
+			err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
+				WithUser(user, usePasswd).
+				DoConfig()
+			if err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error configuring rclone: %v", err), Complete: true}
+				return
+			}
 		}
 
 		// 3. 传输配置文件
-		// PrintStep("StartRemoteCmds", color.BlueString("transfer config file to %s", host))
 		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("transfer config file to %s", host), Complete: false}
-		localConfigPath := GetCurUserConfigPath()
-		remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
-		// 使用 rclone 传输文件
-		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("transfer config file to %s", host), Complete: false}
-		if err := RcloneSyncFileToFile(localConfigPath, fmt.Sprintf("%s:%s", rcloneName, remoteConfigPath)); err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error transferring config: %v", err), Complete: true}
-			return
+		{
+			client, session, err := sshSession(server, user, usePasswd)
+			if err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
+				return
+			}
+			defer client.Close()
+			defer session.Close()
+
+			localConfigPath := GetCurUserConfigPath()
+			remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
+			
+			// 使用 rclone 传输文件
+			if err := RcloneSyncFileToFile(localConfigPath, fmt.Sprintf("%s:%s", rcloneName, remoteConfigPath)); err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error transferring config: %v", err), Complete: true}
+				return
+			}
 		}
 
-		// // 4. 设置配置文件权限
-		// PrintStep("StartRemoteCmds", color.BlueString("set ssh config permissions for %s", host))
-		chmodCmd := fmt.Sprintf("chmod 600 %s", remoteConfigPath)
-		if err := session.Run(chmodCmd); err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error setting config permissions: %v", err), Complete: true}
-			return
+		// 4. 设置配置文件权限
+		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("set ssh config permissions for %s", host), Complete: false}
+		{
+			client, session, err := sshSession(server, user, usePasswd)
+			if err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
+				return
+			}
+			defer client.Close()
+			defer session.Close()
+
+			chmodCmd := fmt.Sprintf("chmod 600 %s", remoteConfigPath)
+			if err := session.Run(chmodCmd); err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error setting config permissions: %v", err), Complete: true}
+				return
+			}
 		}
 
-		// 创建管道用于读取 stdout 和 stderr
-		stdoutPipe, _ := session.StdoutPipe()
-		stderrPipe, _ := session.StderrPipe()
+		// 5. 执行实际命令
+		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("executing command on %s", host), Complete: false}
+		{
+			client, session, err := sshSession(server, user, usePasswd)
+			if err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
+				return
+			}
+			defer client.Close()
+			defer session.Close()
 
-		// 合并 stdout 和 stderr
-		reader := io.MultiReader(stdoutPipe, stderrPipe)
+			// 创建管道用于读取 stdout 和 stderr
+			stdoutPipe, _ := session.StdoutPipe()
+			stderrPipe, _ := session.StderrPipe()
 
-		// 同时输出到日志文件和通道
-		writer := io.MultiWriter(file)
+			// 合并 stdout 和 stderr
+			reader := io.MultiReader(stdoutPipe, stderrPipe)
 
-		// 创建 Scanner 读取合并流
-		scanner := bufio.NewScanner(reader)
+			// 同时输出到日志文件和通道
+			writer := io.MultiWriter(file)
 
-		// 启动命令
-		if err := session.Start(remote_cmd); err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error starting command: %v", err), Complete: true}
-			return
+			// 创建 Scanner 读取合并流
+			scanner := bufio.NewScanner(reader)
+
+			// 启动命令
+			if err := session.Start(remote_cmd); err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error starting command: %v", err), Complete: true}
+				return
+			}
+
+			// 扫描合并后的输出流
+			for scanner.Scan() {
+				line := scanner.Text()
+				ch <- NodeMsg{Index: index, Output: line, Complete: false}
+
+				// 将输出写入日志文件
+				_, _ = writer.Write([]byte(line + "\n"))
+			}
+
+			// 等待命令完成
+			if err := session.Wait(); err != nil {
+				ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error %v with %s", err, logFile), Complete: true}
+				return
+			}
 		}
-
-		// 扫描合并后的输出流
-		for scanner.Scan() {
-			line := scanner.Text()
-			ch <- NodeMsg{Index: index, Output: line, Complete: false}
-
-			// 将输出写入日志文件
-			_, _ = writer.Write([]byte(line + "\n"))
-		}
-
-		// 等待命令完成
-		if err := session.Wait(); err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error %v with %s", err, logFile), Complete: true}
-			return
-		}
-
-		session.Close()
-		client.Close()
 
 		// 发送完成消息
 		ch <- NodeMsg{Index: index, Output: DonePrefix + logFile, Complete: true}
