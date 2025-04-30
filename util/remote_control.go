@@ -241,6 +241,11 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		user := hostsplit[0]
 		server := hostsplit[1]
 
+		// 定义需要在多个代码块中共享的变量
+		rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
+		remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
+		localConfigPath := GetCurUserConfigPath()
+
 		// 1. 准备远程目录
 		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("prepare remote %s secret directory", host), Complete: false}
 		{
@@ -270,7 +275,6 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			defer client.Close()
 			defer session.Close()
 
-			rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
 			err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
 				WithUser(user, usePasswd).
 				DoConfig()
@@ -290,9 +294,6 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			}
 			defer client.Close()
 			defer session.Close()
-
-			localConfigPath := GetCurUserConfigPath()
-			remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
 			
 			// 使用 rclone 传输文件
 			if err := RcloneSyncFileToFile(localConfigPath, fmt.Sprintf("%s:%s", rcloneName, remoteConfigPath)); err != nil {
