@@ -50,6 +50,19 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// projectRoot := GetProjectRoot(t)
 	hostProjectPath := GetHostProjectPath(t)
 
+	// 拉取Python镜像并检查是否可用
+	pullCmd := exec.Command("docker", "pull", "python:3.12.5")
+	err := RunCommand(t, pullCmd)
+	if err != nil {
+		// 检查镜像是否已经存在
+		checkCmd := exec.Command("docker", "image", "inspect", "python:3.12.5")
+		if checkErr := checkCmd.Run(); checkErr != nil {
+			// 镜像既不能拉取也不存在，测试无法继续
+			t.Fatalf("拉取Python镜像失败，且本地无可用镜像: %v", err)
+		}
+		t.Logf("拉取Python镜像失败，但本地有可用镜像，继续测试: %v", err)
+	}
+
 	// 拉取并运行 Python 镜像，映射项目目录
 	cmd := exec.Command("docker", "run", "-d",
 		"-p", "2222:22",
@@ -62,8 +75,8 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	containerID := string(output[:12])
 
 	// 等待容器就绪 - 鲁棒的方式
-	maxAttempts := 50                       // 最多尝试30次
-	waitInterval := 1000 * time.Millisecond // 每次等待0.5秒
+	maxAttempts := 50                       // 最多尝试50次
+	waitInterval := 1000 * time.Millisecond // 每次等待1秒
 	var ready bool
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
