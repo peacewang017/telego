@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	SSH_PORT = 2222  // 非默认 SSH 端口
+	SSH_PORT = 2222 // 非默认 SSH 端口
 )
 
 // BuildContext 构建上下文配置
@@ -26,22 +26,22 @@ type BuildContext struct {
 func GetHostProjectPath(t *testing.T) string {
 	projectRoot := GetProjectRoot(t)
 	buildContextPath := filepath.Join(projectRoot, "build_context.yml")
-	
+
 	// 读取 build_context.yml
 	data, err := os.ReadFile(buildContextPath)
 	if err != nil {
 		t.Fatalf("读取 build_context.yml 失败: %v", err)
 	}
-	
+
 	var buildContext BuildContext
 	if err := yaml.Unmarshal(data, &buildContext); err != nil {
 		t.Fatalf("解析 build_context.yml 失败: %v", err)
 	}
-	
+
 	if buildContext.HOST_PROJECT_DIR == "" {
 		t.Fatal("build_context.yml 中 HOST_PROJECT_DIR 为空")
 	}
-	
+
 	return buildContext.HOST_PROJECT_DIR
 }
 
@@ -49,15 +49,15 @@ func GetHostProjectPath(t *testing.T) string {
 func RunSSHDocker(t *testing.T) (string, func()) {
 	// projectRoot := GetProjectRoot(t)
 	hostProjectPath := GetHostProjectPath(t)
-	
-	// 拉取并运行 SSH 测试容器，映射项目目录
-	cmd := exec.Command("docker", "run", "-d", 
+
+	// 拉取并运行 Python 镜像，安装 SSH 服务并映射项目目录
+	cmd := exec.Command("docker", "run", "-d",
 		"-p", "2222:22",
-		"-v", hostProjectPath + ":/telego",
-		"linuxserver/openssh-server")
+		"-v", hostProjectPath+":/telego",
+		"python:3.12.5")
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("启动 SSH 容器失败: %v", err)
+		t.Fatalf("启动 Python 容器失败: %v", err)
 	}
 	containerID := string(output[:12])
 
@@ -70,6 +70,13 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		t.Fatalf("检查 PATH 失败: %v", err)
 	}
 
+	// // 安装 SSH 服务
+	// installSSHCmd := exec.Command("docker", "exec", containerID,
+	// 	"bash", "-c", "apt-get update && apt-get install -y openssh-server && mkdir -p /var/run/sshd && echo 'root:password' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && service ssh start")
+	// if err := RunCommand(t, installSSHCmd); err != nil {
+	// 	t.Fatalf("安装SSH服务失败: %v", err)
+	// }
+
 	// 在容器内执行拷贝命令
 	copyCmd := exec.Command("docker", "exec", containerID,
 		"cp", fmt.Sprintf("/telego/dist/%s", GetBinaryName()), "/usr/bin/telego")
@@ -78,9 +85,9 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 
 	// 启用 SSH 密码认证
-	sshCmd := exec.Command("docker", "exec", containerID, 
+	sshCmd := exec.Command("docker", "exec", containerID,
 		"telego", "ssh-passwd-auth", "--enable", "true")
-	
+
 	// 获取命令的输出
 	stdout, err := sshCmd.StdoutPipe()
 	if err != nil {
@@ -102,12 +109,19 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 等待命令完成
 	if err := sshCmd.Wait(); err != nil {
-		t.Fatalf("启用 SSH 密码认证失败: %v\n标准输出: %s\n标准错误: %s", 
+		t.Fatalf("启用 SSH 密码认证失败: %v\n标准输出: %s\n标准错误: %s",
 			err, string(stdoutBytes), string(stderrBytes))
 	}
 
 	// 输出成功信息
 	t.Logf("SSH 密码认证已启用\n标准输出: %s", string(stdoutBytes))
+
+	// 在容器内执行 Python 脚本
+	scriptCmd := exec.Command("docker", "exec", containerID,
+		"python", "/telego/scripts/systemctl_docker.py")
+	if err := RunCommand(t, scriptCmd); err != nil {
+		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
+	}
 
 	// 返回容器 ID 和清理函数
 	return containerID, func() {
@@ -161,4 +175,4 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 	}()
 
 	return cmd.Wait()
-} 
+}
