@@ -6,10 +6,27 @@ import subprocess
 import platform
 import yaml
 import shutil
+import argparse
 
 # 预声明全局变量
 HOST_PROJECT_DIR = None
 PROJECT_ROOT = None
+PROXY = None
+# 测试分类
+TESTS = {
+    "direct": [
+       
+    ],
+    "in_docker": [
+        "test/test1_build/build_test.go",  # 构建测试
+        "test/test2_build_and_run_shortcut/shortcut_test.go",  # 快捷方式测试
+        "test/test3_main_node_config/config_test.go",  # 主节点配置测试
+    ]
+}
+
+# Docker 相关配置
+DOCKER_IMAGE = "telego_test"
+DOCKER_BASE_IMAGE = "docker:latest"
 
 def find_project_root():
     """向上查找项目根目录（包含 compile_conf.tmp.yml 的目录）"""
@@ -88,21 +105,6 @@ def load_proxy_config():
 # 全局代理配置
 PROXY = load_proxy_config()
 
-# 测试分类
-TESTS = {
-    "direct": [
-       
-    ],
-    "in_docker": [
-        "test/test1_build/build_test.go",  # 构建测试
-        "test/test2_build_and_run_shortcut/shortcut_test.go",  # 快捷方式测试
-        "test/test3_main_node_config/config_test.go",  # 主节点配置测试
-    ]
-}
-
-# Docker 相关配置
-DOCKER_IMAGE = "telego_test"
-DOCKER_BASE_IMAGE = "docker:latest"
 
 def get_arch():
     """获取当前系统架构"""
@@ -249,9 +251,9 @@ echo "Running tests..."
     if os.path.exists("docker_test.sh"):
         os.remove("docker_test.sh")
 
-def run_tests():
-    """运行所有测试"""
-    print("开始运行测试...")
+def initialization():
+    """执行初始化操作"""
+    print("初始化环境...")
     
     # 设置配置文件
     setup_compile_conf()
@@ -265,13 +267,21 @@ def run_tests():
         print(f"生成菜单配置失败: {e}")
         raise Exception(f"生成菜单配置失败: {e}")
     
+    print("初始化完成")
+
+def run_tests():
+    """运行所有测试"""
+    print("开始运行测试...")
+    
+    # 初始化环境
+    initialization()
+    
     # 运行直接测试
     print("\n=== 运行直接测试 ===")
     try:
         run_direct_tests()
     except subprocess.CalledProcessError as e:
         print(f"直接测试失败: {e}")
-        # sys.exit(1)
         raise Exception(f"直接测试失败: {e}")
     
     # 运行 Docker 测试
@@ -284,15 +294,93 @@ def run_tests():
     
     print("\n所有测试完成！")
 
+def update_ci_workflow():
+    """生成 GitHub Actions 工作流文件"""
+    print("正在生成 CI 工作流文件...")
+    
+    # 读取模板
+    template_path = os.path.join(PROJECT_ROOT, '.github/workflows/test.yml.tmp')
+    with open(template_path, 'r') as f:
+        template_content = f.read()
+    
+    # 构建测试步骤
+    test_steps = [
+        {
+            "name": "Step 1: 初始化环境",
+            "run": "python test_all.py --only-init 2>&1 | tee test_output_1_init.log"
+        }
+    ]
+
+    step_index=2
+    
+    # 添加直接测试步骤 (根据TESTS["direct"]生成)
+    if TESTS["direct"]:
+        direct_tests_commands = []
+        for i, test in enumerate(TESTS["direct"]):
+        #     direct_tests_commands.append(f"go test -v {test}")
+        # direct_tests_str = "\n          ".join(direct_tests_commands)
+        
+            test_steps.append({
+                "name": f"Step {step_index}: {}",
+                "run": f"python -c 'import test_all; test_all.run_direct_tests()' 2>&1 | tee test_output_2_direct.log",
+                "continue-on-error": True
+            })
+        
+    
+    # 添加Docker测试步骤 (根据TESTS["in_docker"]生成)
+    if TESTS["in_docker"]:
+        test_steps.append({
+            "name": "Step 3: 运行 Docker 测试",
+            "run": f"python -c 'import test_all; test_all.run_in_docker()' 2>&1 | tee test_output_3_docker.log",
+            "continue-on-error": True
+        })
+    
+    # 生成 YAML 格式的步骤
+    steps_yaml = ""
+    for step in test_steps:
+        steps_yaml += f"      - name: {step['name']}\n"
+        steps_yaml += f"        run: |\n"
+        steps_yaml += f"          {step['run']}\n"
+        if 'continue-on-error' in step and step['continue-on-error']:
+            steps_yaml += f"        continue-on-error: true\n"
+    
+    # 替换模板中的注释部分
+    workflow_content = template_content.replace("      # - name: Run tests\n      #   run: |\n      #     set -x  # 启用命令回显\n      #     python test_all.py 2>&1 | tee test_output.log\n      #   continue-on-error: true", steps_yaml)
+    
+    # 保存工作流文件
+    output_path = os.path.join(PROJECT_ROOT, '.github/workflows/test.yml')
+    with open(output_path, 'w') as f:
+        f.write(workflow_content)
+    
+    print(f"CI 工作流文件已生成: {output_path}")
+
+def parse_args():
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(description='运行测试并更新 CI 配置')
+    parser.add_argument('--update-ci', action='store_true', help='更新 CI 工作流文件')
+    parser.add_argument('--only-init', action='store_true', help='仅执行初始化步骤')
+    return parser.parse_args()
+
 if __name__ == "__main__":
+    args = parse_args()
+    
     try:
+        if args.update_ci:
+            update_ci_workflow()
+            print("CI 工作流已更新，退出...")
+            sys.exit(0)
+        
+        if args.only_init:
+            initialization()
+            print("初始化完成，退出...")
+            sys.exit(0)
+        
+        # 默认行为：运行所有测试
         run_tests()
         print("\n所有测试完成！")
     except subprocess.CalledProcessError as e:
         print(f"\n测试失败: {e}")
-        # sys.exit(1)
         raise Exception(f"测试失败: {e}")
     except Exception as e:
         print(f"\n发生错误: {e}")
-        # sys.exit(1)
         raise Exception(f"发生错误: {e}") 

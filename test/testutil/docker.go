@@ -83,6 +83,13 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		t.Fatalf("容器启动超时，在 %d 次尝试后仍未就绪", maxAttempts)
 	}
 
+	// 在容器内执行 Python 脚本
+	scriptCmd := exec.Command("docker", "exec", containerID,
+		"python3", "/telego/scripts/systemctl_docker.py")
+	if err := RunCommand(t, scriptCmd); err != nil {
+		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
+	}
+
 	// 安装SSH服务器
 	installSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
 		"apt-get update && apt-get install -y openssh-server && mkdir -p /run/sshd")
@@ -112,13 +119,6 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		"cp", fmt.Sprintf("/telego/dist/%s", GetBinaryName()), "/usr/bin/telego")
 	if err := RunCommand(t, copyCmd); err != nil {
 		t.Fatalf("复制telego二进制文件失败: %v", err)
-	}
-
-	// 在容器内执行 Python 脚本
-	scriptCmd := exec.Command("docker", "exec", containerID,
-		"python3", "/telego/scripts/systemctl_docker.py")
-	if err := RunCommand(t, scriptCmd); err != nil {
-		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
 	}
 
 	// 启用 SSH 密码认证
