@@ -40,14 +40,36 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, 
 	// 2. Restart SSH service
 	err = restartSshService()
 	if err != nil {
+		// debug old file and new file
+		fmt.Println(color.RedString("********** Old file **********"))
+		oldFile, err := os.ReadFile(backupFile)
+		if err != nil {
+			fmt.Println(color.RedString("Failed to read old file: %w", err))
+		}
+		withLineNumber := func(content []byte) string {
+			lines := strings.Split(string(content), "\n")
+			for i, line := range lines {
+				fmt.Printf("%d: %s\n", i+1, line)
+			}
+			return strings.Join(lines, "\n")
+		}
+		fmt.Println(withLineNumber(oldFile))
+		fmt.Println(color.RedString("********** New file **********"))
+		newFile, err := os.ReadFile(sshdConfigPath)
+		if err != nil {
+			fmt.Println(color.RedString("Failed to read new file: %w", err))
+		}
+
+		fmt.Println(withLineNumber(newFile))
 		return backupFile, fmt.Errorf("failed to restart SSH service: %w", err)
 	}
 
 	return backupFile, nil
 }
 
+var sshdConfigPath = "/etc/ssh/sshd_config"
+
 func configureSshdConfig(enable bool) (string, error) {
-	sshdConfigPath := "/etc/ssh/sshd_config"
 
 	// Check if file exists
 	_, err := os.Stat(sshdConfigPath)
@@ -123,6 +145,7 @@ func restartSshService() error {
 
 	// Try systemctl first (systemd)
 	_, err := util.ModRunCmd.NewBuilder("systemctl", "restart", "sshd").WithRoot().ShowProgress().BlockRun()
+
 	if err == nil {
 		return nil
 	}
