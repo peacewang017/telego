@@ -18,6 +18,35 @@ type ModJobSshPasswdAuthStruct struct{}
 
 var ModJobSshPasswdAuth ModJobSshPasswdAuthStruct
 
+func debugSshConfig(withbackup string) {
+	withLineNumber := func(content []byte) string {
+		lines := strings.Split(string(content), "\n")
+		for i, line := range lines {
+			// fmt.Printf("%d: %s\n", i+1, line)
+			lines[i] = fmt.Sprintf("%d: %s", i+1, line)
+		}
+		return strings.Join(lines, "\n")
+	}
+
+	if len(withbackup) > 0 {
+		// debug old file and new file
+		fmt.Println(color.RedString("********** Old file **********"))
+		oldFile, err := os.ReadFile(withbackup)
+		if err != nil {
+			fmt.Println(color.RedString("Failed to read old file: %w", err))
+		}
+
+		fmt.Println(withLineNumber(oldFile))
+
+	}
+	fmt.Println(color.RedString("********** New file **********"))
+	newFile, err := os.ReadFile(sshdConfigPath)
+	if err != nil {
+		fmt.Println(color.RedString("Failed to read new file: %w", err))
+	}
+
+	fmt.Println(withLineNumber(newFile))
+}
 func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, error) {
 	action := "Enabling"
 	if !enable {
@@ -31,6 +60,13 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, 
 		return "", fmt.Errorf("unsupported operating system")
 	}
 
+	err := restartSshService()
+	if err != nil {
+		fmt.Println(color.RedString(("Current ssh configuration maybe wrong")))
+		debugSshConfig("")
+		return "", fmt.Errorf("failed to restart SSH service: %w", err)
+	}
+
 	// 1. Update SSH config to allow/disallow password authentication
 	backupFile, err := configureSshdConfig(enable)
 	if err != nil {
@@ -40,27 +76,7 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, 
 	// 2. Restart SSH service
 	err = restartSshService()
 	if err != nil {
-		// debug old file and new file
-		fmt.Println(color.RedString("********** Old file **********"))
-		oldFile, err := os.ReadFile(backupFile)
-		if err != nil {
-			fmt.Println(color.RedString("Failed to read old file: %w", err))
-		}
-		withLineNumber := func(content []byte) string {
-			lines := strings.Split(string(content), "\n")
-			for i, line := range lines {
-				fmt.Printf("%d: %s\n", i+1, line)
-			}
-			return strings.Join(lines, "\n")
-		}
-		fmt.Println(withLineNumber(oldFile))
-		fmt.Println(color.RedString("********** New file **********"))
-		newFile, err := os.ReadFile(sshdConfigPath)
-		if err != nil {
-			fmt.Println(color.RedString("Failed to read new file: %w", err))
-		}
-
-		fmt.Println(withLineNumber(newFile))
+		debugSshConfig(backupFile)
 		return backupFile, fmt.Errorf("failed to restart SSH service: %w", err)
 	}
 
