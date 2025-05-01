@@ -311,29 +311,29 @@ def update_ci_workflow():
         }
     ]
 
-    step_index=2
+    step_index = 2
     
     # 添加直接测试步骤 (根据TESTS["direct"]生成)
     if TESTS["direct"]:
-        direct_tests_commands = []
         for i, test in enumerate(TESTS["direct"]):
-        #     direct_tests_commands.append(f"go test -v {test}")
-        # direct_tests_str = "\n          ".join(direct_tests_commands)
-        
+            test_name = os.path.basename(test).replace("_test.go", "")
             test_steps.append({
-                "name": f"Step {step_index}: {}",
-                "run": f"python -c 'import test_all; test_all.run_direct_tests()' 2>&1 | tee test_output_2_direct.log",
+                "name": f"Step {step_index}: {test_name}",
+                "run": f"go test -v {test} 2>&1 | tee test_output_{step_index}_{test_name}.log",
                 "continue-on-error": True
             })
-        
+            step_index += 1
     
     # 添加Docker测试步骤 (根据TESTS["in_docker"]生成)
     if TESTS["in_docker"]:
-        test_steps.append({
-            "name": "Step 3: 运行 Docker 测试",
-            "run": f"python -c 'import test_all; test_all.run_in_docker()' 2>&1 | tee test_output_3_docker.log",
-            "continue-on-error": True
-        })
+        for i, test in enumerate(TESTS["in_docker"]):
+            test_name = os.path.basename(test).replace("_test.go", "")
+            test_steps.append({
+                "name": f"Step {step_index}: {test_name}",
+                "run": f"python -c 'import test_all; test_all.run_docker_test(\"{test}\")' 2>&1 | tee test_output_{step_index}_{test_name}.log",
+                "continue-on-error": True
+            })
+            step_index += 1
     
     # 生成 YAML 格式的步骤
     steps_yaml = ""
