@@ -103,6 +103,9 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 			"echo 'root:password' | chpasswd && "+
 			"adduser --gecos '' --disabled-password abc && "+
 			"echo 'abc:abc' | chpasswd && "+
+			"chown root:root /etc/ssh /etc/ssh/sshd_config && "+
+			"chmod 755 /etc/ssh && "+
+			"chmod 644 /etc/ssh/sshd_config && "+
 			"/usr/sbin/sshd")
 	if err := RunCommand(t, configSSHCmd); err != nil {
 		t.Fatalf("配置SSH服务器失败: %v", err)
