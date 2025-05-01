@@ -160,21 +160,25 @@ func restartSshService() error {
 	util.PrintStep("JobSshPasswdAuth RestartSshService", "Restarting SSH service")
 
 	// Try systemctl first (systemd)
-	_, err := util.ModRunCmd.NewBuilder("systemctl", "restart", "sshd").WithRoot().ShowProgress().BlockRun()
+	output1, err1 := util.ModRunCmd.NewBuilder("systemctl", "restart", "sshd").WithRoot().ShowProgress().BlockRun()
 
-	if err == nil {
+	if err1 == nil {
 		return nil
 	}
 
 	// Try service command (older systems)
-	_, err = util.ModRunCmd.NewBuilder("service", "sshd", "restart").WithRoot().ShowProgress().BlockRun()
-	if err == nil {
+	output2, err2 := util.ModRunCmd.NewBuilder("service", "sshd", "restart").WithRoot().ShowProgress().BlockRun()
+	if err2 == nil {
 		return nil
 	}
 
 	// Try ssh instead of sshd (some distributions)
-	_, err = util.ModRunCmd.NewBuilder("service", "ssh", "restart").WithRoot().ShowProgress().BlockRun()
-	return err
+	output3, err3 := util.ModRunCmd.NewBuilder("service", "ssh", "restart").WithRoot().ShowProgress().BlockRun()
+	if err3 == nil {
+		return nil
+	}
+
+	return fmt.Errorf("failed to restart SSH service: %w, err1: %w, err2: %w, err3: %w, output1: %s, output2: %s, output3: %s", err1, err2, err3, output1, output2, output3)
 }
 
 // Job entry point
