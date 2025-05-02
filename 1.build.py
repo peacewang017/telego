@@ -19,9 +19,14 @@ def find_project_root():
         if parent_dir == current_dir:
             raise RuntimeError("无法找到项目根目录（未找到 compile_conf.tmp.yml）")
         current_dir = parent_dir
+def is_in_github_codespace():
+    return os.environ.get("CODESPACE_NAME") is not None
 
 # 检查是否在容器内
 def is_in_container():
+    if is_in_github_codespace():
+        return False
+        
     # 检查 /.dockerenv 文件
     if os.path.exists('/.dockerenv'):
         return True
