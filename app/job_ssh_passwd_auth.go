@@ -62,7 +62,7 @@ func (m ModJobSshPasswdAuthStruct) ConfigureSshPasswdAuth(enable bool) (string, 
 
 	err := restartSshService()
 	if err != nil {
-		fmt.Println(color.RedString(("Current ssh configuration maybe wrong")))
+		fmt.Println(color.RedString("Current ssh configuration maybe wrong, err: %w", err))
 		debugSshConfig("")
 		return "", fmt.Errorf("failed to restart SSH service: %w", err)
 	}
