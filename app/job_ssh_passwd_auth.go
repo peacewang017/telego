@@ -159,23 +159,29 @@ func updateSshConfigSetting(config, setting, value string) string {
 func restartSshService() error {
 	util.PrintStep("JobSshPasswdAuth RestartSshService", "Restarting SSH service")
 
+	var err1, err2, err3 error
+	var output1, output2, output3 string
+
 	// Try systemctl first (systemd)
-	output1, err1 := util.ModRunCmd.NewBuilder("systemctl", "restart", "sshd").WithRoot().ShowProgress().BlockRun()
+	// try 5 times
+	for i := 0; i < 5; i++ {
+		output1, err1 = util.ModRunCmd.NewBuilder("systemctl", "restart", "sshd").WithRoot().ShowProgress().BlockRun()
 
-	if err1 == nil {
-		return nil
-	}
+		if err1 == nil {
+			return nil
+		}
 
-	// Try service command (older systems)
-	output2, err2 := util.ModRunCmd.NewBuilder("service", "sshd", "restart").WithRoot().ShowProgress().BlockRun()
-	if err2 == nil {
-		return nil
-	}
+		// Try service command (older systems)
+		output2, err2 = util.ModRunCmd.NewBuilder("service", "sshd", "restart").WithRoot().ShowProgress().BlockRun()
+		if err2 == nil {
+			return nil
+		}
 
-	// Try ssh instead of sshd (some distributions)
-	output3, err3 := util.ModRunCmd.NewBuilder("service", "ssh", "restart").WithRoot().ShowProgress().BlockRun()
-	if err3 == nil {
-		return nil
+		// Try ssh instead of sshd (some distributions)
+		output3, err3 = util.ModRunCmd.NewBuilder("service", "ssh", "restart").WithRoot().ShowProgress().BlockRun()
+		if err3 == nil {
+			return nil
+		}
 	}
 
 	return fmt.Errorf("failed to restart SSH service: %w, err1: %w, err2: %w, err3: %w, output1: %s, output2: %s, output3: %s", err1, err2, err3, output1, output2, output3)
