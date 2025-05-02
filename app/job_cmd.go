@@ -60,8 +60,9 @@ func (_ ModJobCmdStruct) CmdLocal(job CmdJob) {
 	}
 
 	if strings.HasPrefix(job.CmdPath, "/") {
-		fmt.Println(color.RedString("Path must be relative, shouldn't start with '/'"))
-		os.Exit(1)
+		// fmt.Println(color.RedString("Path must be relative, shouldn't start with '/'"))
+		// os.Exit(1)
+		job.CmdPath = job.CmdPath[1:]
 	}
 
 	// avoid nil ptr for conf
