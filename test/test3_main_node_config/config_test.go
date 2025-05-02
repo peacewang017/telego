@@ -2,8 +2,9 @@ package test3_main_node_config
 
 import (
 	"os/exec"
-	"testing"
 	"telego/test/testutil"
+	"telego/util"
+	"testing"
 )
 
 func TestSSHKeyGeneration(t *testing.T) {
@@ -22,9 +23,9 @@ func TestSSHKeyGeneration(t *testing.T) {
 	}
 
 	// 测试 SSH 连接
-	sshCmd := exec.Command("ssh", "-p", "2222", "root@127.0.0.1", "echo", "test")
+	sshCmd := exec.Command("ssh", "-p", "2222", util.MainNodeUser+"@"+util.MainNodeIp, "echo", "test")
 	if err := testutil.RunCommand(t, sshCmd); err != nil {
-		t.Fatalf("SSH 连接测试失败: %v", err)
+		t.Fatalf("SSH 连接 abc 测试失败: %v", err)
 	}
 
 	t.Log("SSH 密钥生成和连接测试成功")
