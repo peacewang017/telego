@@ -1,6 +1,7 @@
 package test3_main_node_config
 
 import (
+	"os"
 	"os/exec"
 	"telego/test/testutil"
 	"telego/util"
@@ -15,6 +16,7 @@ func TestSSHKeyGeneration(t *testing.T) {
 	defer cleanup()
 
 	// 生成 SSH 密钥
+	os.Setenv("SSH_PW", util.MainNodeUser)
 	cmd := exec.Command("telego", "cmd", "--cmd", "/update_config/ssh_config/1.gen_or_get_key")
 	cmd.Dir = projectRoot
 
