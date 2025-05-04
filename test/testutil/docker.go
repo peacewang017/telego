@@ -84,6 +84,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 
 	// 在容器内执行 Python 脚本
+	t.Log("RunSSHDocker 配置systemctl")
 	scriptCmd := exec.Command("docker", "exec", containerID,
 		"python3", "/telego/scripts/systemctl_docker.py")
 	if err := RunCommand(t, scriptCmd); err != nil {
@@ -91,13 +92,15 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 
 	// 安装SSH服务器
+	t.Log("RunSSHDocker 安装SSH服务器")
 	installSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
-		"apt-get update && apt-get install -y openssh-server && mkdir -p /run/sshd")
+		"apt-get update && apt-get install -y openssh-server sshpass && mkdir -p /run/sshd")
 	if err := RunCommand(t, installSSHCmd); err != nil {
 		t.Fatalf("安装SSH服务器失败: %v", err)
 	}
 
 	// 配置SSH服务器和创建用户
+	t.Log("RunSSHDocker 配置SSH服务器和创建用户")
 	configSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
 		"echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "+
 			"echo 'root:password' | chpasswd && "+
@@ -111,13 +114,17 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		t.Fatalf("配置SSH服务器失败: %v", err)
 	}
 
+	
+
 	// 检查 PATH 环境变量
+	t.Log("RunSSHDocker 检查 PATH 环境变量")
 	pathCmd := exec.Command("docker", "exec", containerID, "echo", "$PATH")
 	if err := RunCommand(t, pathCmd); err != nil {
 		t.Fatalf("检查 PATH 失败: %v", err)
 	}
 
 	// 在容器内执行拷贝命令
+	t.Log("RunSSHDocker 在容器内执行拷贝命令")
 	copyCmd := exec.Command("docker", "exec", containerID,
 		"cp", fmt.Sprintf("/telego/dist/%s", GetBinaryName()), "/usr/bin/telego")
 	if err := RunCommand(t, copyCmd); err != nil {
@@ -125,6 +132,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 
 	// 启用 SSH 密码认证
+	t.Log("RunSSHDocker 启用 SSH 密码认证")
 	sshCmd := exec.Command("docker", "exec", containerID,
 		"telego", "ssh-passwd-auth", "--enable", "true")
 
@@ -151,6 +159,23 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	if err := sshCmd.Wait(); err != nil {
 		t.Fatalf("启用 SSH 密码认证失败: %v\n标准输出: %s\n标准错误: %s",
 			err, string(stdoutBytes), string(stderrBytes))
+	}
+
+	// 测试 SSH 访问 (用户 abc，使用密码认证)
+	t.Log("RunSSHDocker 测试SSH密码认证")
+	// 首先安装sshpass
+	installSshpassCmd := exec.Command("docker", "exec", containerID, "apt-get", "install", "-y", "sshpass")
+	if err := RunCommand(t, installSshpassCmd); err != nil {
+		t.Fatalf("安装sshpass失败: %v", err)
+	}
+
+	// 使用sshpass工具自动提供密码
+	sshCmd = exec.Command("docker", "exec", containerID, "sshpass", "-p", "abc", 
+		"ssh", "abc@localhost", "-p", "2222", 
+		"-o", "StrictHostKeyChecking=no", 
+		"-o", "UserKnownHostsFile=/dev/null", "echo", "helloworld")
+	if err := RunCommand(t, sshCmd); err != nil {
+		t.Fatalf("SSH 密码访问失败: %v", err)
 	}
 
 	// 输出成功信息
