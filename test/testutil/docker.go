@@ -101,7 +101,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	configSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
 		"echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "+
 			"echo 'root:password' | chpasswd && "+
-			"adduser --gecos '' --disabled-password abc && "+
+			"useradd -m -s /bin/bash abc && "+
 			"echo 'abc:abc' | chpasswd && "+
 			"chown root:root /etc/ssh /etc/ssh/sshd_config && "+
 			"chmod 755 /etc/ssh && "+

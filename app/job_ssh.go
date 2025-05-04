@@ -156,6 +156,7 @@ func (m ModJobSshStruct) setupThisNode(pubkey string) {
 }
 
 func (m ModJobSshStruct) genOrGetKey() {
+	util.PrintStep("job ssh","genOrGetKey started")
 	fail := false
 	failInfo := ""
 	defer func() {

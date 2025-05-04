@@ -11,3 +11,4 @@ go
 build_context.yml
 Dockerfile.test
 compile_conf.yml.bak
+rclone
