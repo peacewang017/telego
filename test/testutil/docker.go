@@ -159,16 +159,12 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	if err := sshCmd.Wait(); err != nil {
 		t.Fatalf("启用 SSH 密码认证失败: %v\n标准输出: %s\n标准错误: %s",
 			err, string(stdoutBytes), string(stderrBytes))
+	}else{
+		t.Log("启用 SSH 密码认证成功, stdout: %s", string(stdoutBytes))
 	}
 
 	// 测试 SSH 访问 (用户 abc，使用密码认证)
 	t.Log("RunSSHDocker 测试SSH密码认证")
-	// 首先安装sshpass
-	installSshpassCmd := exec.Command("docker", "exec", containerID, "apt-get", "install", "-y", "sshpass")
-	if err := RunCommand(t, installSshpassCmd); err != nil {
-		t.Fatalf("安装sshpass失败: %v", err)
-	}
-
 	// 使用sshpass工具自动提供密码
 	sshCmd = exec.Command("docker", "exec", containerID, "sshpass", "-p", "abc", 
 		"ssh", "abc@localhost", "-p", "2222", 
