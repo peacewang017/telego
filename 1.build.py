@@ -65,9 +65,9 @@ os.chdir(curfdir)
 
 # debug current path and filelist
 print(f"当前路径：{curfdir}")
-print(f"当前目录下的文件：")
-for f in os.listdir(curfdir):
-    print(f"- {f}")
+print(f"当前目录下的文件：{os.listdir(curfdir)}")
+# for f in os.listdir(curfdir):
+#     print(f"- {f}")
 
 with open("compile_conf.yml",encoding="utf-8") as f:
     conf=yaml.safe_load(f)

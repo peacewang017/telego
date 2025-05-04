@@ -6,6 +6,7 @@ with open("compile_conf.yml") as f:
     conf=yaml.safe_load(f)
 main_node_ip=conf["main_node_ip"]
 main_node_user=conf["main_node_user"]
+main_node_sshport=conf.get("main_node_sshport", "22")  # Default to 22 if not specified
 img_repo=conf["image_repo_with_prefix"]
 
 with open("util/compile_conf_gen.go","w") as f:
@@ -13,6 +14,7 @@ with open("util/compile_conf_gen.go","w") as f:
 package util
 var MainNodeIp = "{main_node_ip}"
 var MainNodeUser = "{main_node_user}"
+var MainNodeSshPort = "{main_node_sshport}"
 var ImgRepoAddressWithPrefix = "{img_repo}"
 """)
 

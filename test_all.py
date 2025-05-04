@@ -88,6 +88,7 @@ def setup_compile_conf():
 # https://qcnoe3hd7k5c.feishu.cn/wiki/MoDOw2fxnidARCkE2hKc60jHn8b?fromScene=spaceOverview
 main_node_ip: localhost
 main_node_user: abc
+main_node_sshport: 2222
 image_repo_with_prefix: http://localhost:5000
 """)
     print("已创建新的配置文件")

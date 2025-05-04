@@ -51,6 +51,7 @@ type RcloneConfiger struct {
 	Type     RcloneConfigType
 	Name     string
 	Host     string
+	Port     string
 	User     string
 	Password string
 	Error    error
@@ -73,9 +74,19 @@ func NewRcloneConfiger(
 				Error: fmt.Errorf("不支持的 rclone ssh 地址: %+v", address),
 			}
 		}
+
+		// Parse host and port
+		hostport := strings.Split(address, ":")
+		host := hostport[0]
+		port := "22"
+		if len(hostport) == 2 {
+			port = hostport[1]
+		}
+
 		return &RcloneConfiger{
 			Type: t,
-			Host: address,
+			Host: host,
+			Port: port,
 			Name: name,
 		}
 	default:
@@ -92,6 +103,12 @@ func (r *RcloneConfiger) WithUser(user, pw string) *RcloneConfiger {
 	return r
 }
 
+func (r *RcloneConfiger) WithPort(port string) *RcloneConfiger {
+	fmt.Println(color.GreenString("rclone config with port %s", port))
+	r.Port = port
+	return r
+}
+
 func (r *RcloneConfiger) DoConfig() error {
 	if r.Error != nil {
 		return r.Error
@@ -100,15 +117,8 @@ func (r *RcloneConfiger) DoConfig() error {
 	case RcloneConfigTypeSsh:
 		// rclone config
 		// 配置项
-		hostport := strings.Split(r.Host, ":")
-
-		host, port := func() (string, string) {
-			if len(hostport) == 2 {
-				return hostport[0], hostport[1]
-			} else {
-				return hostport[0], "22"
-			}
-		}()
+		host := r.Host
+		port := r.Port
 		user := r.User
 
 		// 使用 rclone obscure 加密密码
@@ -171,6 +181,7 @@ func ConfigMainNodeRcloneIfNeed() {
 
 	err = NewRcloneConfiger(RcloneConfigTypeSsh{}, MainNodeRcloneName, MainNodeIp).
 		WithUser(MainNodeUser, password).
+		WithPort(MainNodeSshPort).
 		DoConfig()
 
 	if err != nil {
