@@ -17,9 +17,9 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
-	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fatih/color"
@@ -92,8 +92,6 @@ func (m RemoteControlModel) View() string {
 	return view
 }
 
-
-
 // GetRemoteArch 获取远程主机的架构信息
 // hosts: 远程主机列表
 // usePasswd: 密码
@@ -139,10 +137,10 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 	// 使用 uname 命令获取系统信息
 	results := StartRemoteCmds(hosts, "uname -s", usePasswd)
-	
+
 	fmt.Println(color.BlueString("GetRemoteSys raw output: %v", results))
 	Logger.Debugf("GetRemoteSys: %v", results)
-	
+
 	remoteSys := funk.Map(results, func(result string) SystemType {
 		// 清理结果
 		result = strings.ToLower(strings.TrimSpace(result))
@@ -169,10 +167,10 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 			return UnknownSystem{}
 		}
 	}).([]SystemType)
-	
+
 	fmt.Println(color.BlueString("GetRemoteSys type: %T", remoteSys))
 	fmt.Println(color.BlueString("GetRemoteSys content: %+v", remoteSys))
-	
+
 	return remoteSys
 }
 
@@ -198,7 +196,7 @@ func createUserConfigs(hosts []string, usePasswd string) error {
 
 		// 创建用户特定的配置文件路径，添加 userconfig_ 前缀
 		userConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
-		
+
 		// 确保目录存在
 		if err := os.MkdirAll(filepath.Dir(userConfigPath), 0755); err != nil {
 			return fmt.Errorf("error creating config directory for user %s: %w", user, err)
@@ -246,8 +244,20 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 		// 获取主机信息
 		hostsplit := strings.Split(host, "@")
+		if len(hostsplit) != 2 {
+			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Invalid host format: %s", host), Complete: true}
+			return
+		}
 		user := hostsplit[0]
 		server := hostsplit[1]
+		port := "22"
+
+		// Parse port if it exists in the server address (format: hostname:port)
+		if strings.Contains(server, ":") {
+			parts := strings.Split(server, ":")
+			server = parts[0]
+			port = parts[1]
+		}
 
 		// 定义需要在多个代码块中共享的变量
 		rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
@@ -257,7 +267,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		// 执行单个命令的辅助函数
 		execRemoteCmd := func(cmd string, desc string) error {
 			ch <- NodeMsg{Index: index, Output: desc, Complete: false}
-			client, session, err := sshSession(server, user, usePasswd)
+			client, session, err := sshSession(server, user, usePasswd, port)
 			if err != nil {
 				return fmt.Errorf("ssh error: %v", err)
 			}
@@ -269,7 +279,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		// 执行命令并获取输出的辅助函数
 		execRemoteCmdWithOutput := func(cmd string, desc string) (string, string, error) {
 			ch <- NodeMsg{Index: index, Output: desc, Complete: false}
-			client, session, err := sshSession(server, user, usePasswd)
+			client, session, err := sshSession(server, user, usePasswd, port)
 			if err != nil {
 				return "", "", fmt.Errorf("ssh error: %v", err)
 			}
@@ -330,7 +340,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 			// 3. 在远程执行 sudo 命令，使用密码文件
 			stdout, stderr, err = execRemoteCmdWithOutput(
-				fmt.Sprintf("cat %s | sudo -S sh -c 'echo \"%s ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/%s && chmod 440 /etc/sudoers.d/%s' && rm -f %s", 
+				fmt.Sprintf("cat %s | sudo -S sh -c 'echo \"%s ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/%s && chmod 440 /etc/sudoers.d/%s' && rm -f %s",
 					remotePasswdFile, user, user, user, remotePasswdFile),
 				fmt.Sprintf("configuring sudo for %s", host),
 			)
@@ -378,7 +388,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 		// 6. 执行实际命令
 		ch <- NodeMsg{Index: index, Output: fmt.Sprintf("executing command on %s", host), Complete: false}
-		client, session, err := sshSession(server, user, usePasswd)
+		client, session, err := sshSession(server, user, usePasswd, port)
 		if err != nil {
 			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error ssh: %v", err), Complete: true}
 			return

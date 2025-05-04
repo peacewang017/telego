@@ -28,7 +28,7 @@ func findPrivateKeys(dir string) []string {
 }
 
 // 尝试使用私钥连接服务器
-func tryKey(server, username, keyPath string) bool {
+func tryKey(server, username, keyPath string, port string) bool {
 	privateKey, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		fmt.Printf("无法读取私钥文件 %s: %v\n", keyPath, err)
@@ -52,7 +52,7 @@ func tryKey(server, username, keyPath string) bool {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 简化处理，请根据需要增强安全性
 	}
 
-	client, err := ssh.Dial("tcp", server, config)
+	client, err := ssh.Dial("tcp", server+":"+port, config)
 	if err != nil {
 		Logger.Debugf("使用私钥 %s 连接失败: %v\n", keyPath, err)
 		// fmt.Printf("使用私钥 %s 连接失败: %v\n", keyPath, err)
@@ -64,8 +64,8 @@ func tryKey(server, username, keyPath string) bool {
 	return true
 }
 
-func sshWithConf(server string, config *ssh.ClientConfig) (*ssh.Client, *ssh.Session, error) {
-	client, err := ssh.Dial("tcp", server, config)
+func sshWithConf(server string, port string, config *ssh.ClientConfig) (*ssh.Client, *ssh.Session, error) {
+	client, err := ssh.Dial("tcp", server+":"+port, config)
 	if err != nil {
 		// fmt.Printf("使用私钥 %s 连接服务器失败: %v\n", keyPath, err)
 		return nil, nil, fmt.Errorf("连接服务器失败: %v\n", err)
@@ -81,8 +81,8 @@ func sshWithConf(server string, config *ssh.ClientConfig) (*ssh.Client, *ssh.Ses
 	return client, session, nil
 }
 
-func sshWithPasswd(server, username, passwd string) (*ssh.Client, *ssh.Session, error) {
-	Logger.Debugf("sshWithPasswd to %s@%s", username, server)
+func sshWithPasswd(server, username, passwd string, port string) (*ssh.Client, *ssh.Session, error) {
+	Logger.Debugf("sshWithPasswd to %s@%s:%s", username, server, port)
 	config := &ssh.ClientConfig{
 		User: username,
 		Auth: []ssh.AuthMethod{
@@ -91,7 +91,7 @@ func sshWithPasswd(server, username, passwd string) (*ssh.Client, *ssh.Session, 
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	c, s, e := sshWithConf(server, config)
+	c, s, e := sshWithConf(server, port, config)
 	if e != nil {
 		return c, s, fmt.Errorf("使用密码连接失败：%v", e)
 	} else {
@@ -100,7 +100,7 @@ func sshWithPasswd(server, username, passwd string) (*ssh.Client, *ssh.Session, 
 }
 
 // 使用找到的私钥连接并执行命令
-func sshWithKey(server, username, keyPath string) (*ssh.Client, *ssh.Session, error) {
+func sshWithKey(server, username, keyPath string, port string) (*ssh.Client, *ssh.Session, error) {
 	privateKey, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		// fmt.Printf("无法读取私钥文件 %s: %v\n", keyPath, err)
@@ -121,7 +121,7 @@ func sshWithKey(server, username, keyPath string) (*ssh.Client, *ssh.Session, er
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	c, s, e := sshWithConf(server, config)
+	c, s, e := sshWithConf(server, port, config)
 	if e != nil {
 		return c, s, fmt.Errorf("使用私钥 %s 连接失败：%v", keyPath, e)
 	} else {
@@ -130,14 +130,17 @@ func sshWithKey(server, username, keyPath string) (*ssh.Client, *ssh.Session, er
 }
 
 // left 'usePasswd'
-func sshSession(server, username, usePasswd string) (*ssh.Client, *ssh.Session, error) {
-	server = server + ":22"
-	// 目标服务器信息
-	// server := "example.com:22" // 替换为你的服务器地址和端口
-	// username := "your-username" // 替换为你的用户名
+func sshSession(server, user, usePasswd string, specPort ...string) (*ssh.Client, *ssh.Session, error) {
+	// 设置默认端口
+	port := "22"
+
+	// 如果提供了指定端口参数，则使用指定的端口
+	if len(specPort) > 0 && specPort[0] != "" {
+		port = specPort[0]
+	}
 
 	if usePasswd != "" {
-		return sshWithPasswd(server, username, usePasswd)
+		return sshWithPasswd(server, user, usePasswd, port)
 	} else {
 		// 扫描 ~/.ssh 目录下的所有私钥
 		sshDir := filepath.Join(homedir.HomeDir(), ".ssh")
@@ -153,7 +156,7 @@ func sshSession(server, username, usePasswd string) (*ssh.Client, *ssh.Session, 
 		findKey := ""
 		for _, key := range keys {
 			// fmt.Printf("尝试使用私钥: %s\n", key)
-			if tryKey(server, username, key) {
+			if tryKey(server, user, key, port) {
 				findKey = key
 				// return
 				break
@@ -164,7 +167,7 @@ func sshSession(server, username, usePasswd string) (*ssh.Client, *ssh.Session, 
 			// fmt.Println("未找到任何私钥文件。")
 			return nil, nil, fmt.Errorf("未找到任何私钥文件。")
 		}
-		return sshWithKey(server, username, findKey)
+		return sshWithKey(server, user, findKey, port)
 	}
 
 	// fmt.Println("未能使用任何私钥成功连接到服务器。")
