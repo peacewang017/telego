@@ -111,15 +111,14 @@ WantedBy=multi-user.target
 				ExecStart:        "/usr/bin/python3 -m http.server 8003", // 替换为实际路径和端口
 			}
 
-			// mkdir /teledeploy
+
+
+			//  // mkdir /teledeploy
 			util.PrintStep("StartFileserver", color.BlueString("mkdir /teledeploy"))
 			util.ModRunCmd.NewBuilder("mkdir", "-p", "/teledeploy").WithRoot().BlockRun()
-
-			
 			// chown to cur user
-			util.PrintStep("StartFileserver", color.BlueString("chown -R %s /teledeploy", util.GetCurrentUser()))
-			curUser := util.GetCurrentUser()
-			util.ModRunCmd.NewBuilder("chown", "-R", curUser, "/teledeploy").WithRoot().BlockRun()
+			util.PrintStep("StartFileserver", color.BlueString("chown -R %s /teledeploy", util.MainNodeUser))
+			util.ModRunCmd.NewBuilder("chown", "-R", util.MainNodeUser, "/teledeploy").WithRoot().BlockRun()
 
 			// 生成服务文件内容
 			serviceFilePath := "/etc/systemd/system/python-fileserver.service"

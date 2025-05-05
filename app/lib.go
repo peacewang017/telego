@@ -172,6 +172,7 @@ func InitMenuTree(loadSubPrjs bool) *MenuItem {
 
 func Main() {
 	go util.HasNetwork()
+	util.InitOwnedDir()
 	workdir := util.WorkspaceDir()
 
 	// 设置日志级别

@@ -8,12 +8,53 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
+
+	"github.com/fatih/color"
 )
 
 var fakeWorkspace *string
 
 func SetFakeWorkspace(dir string) {
 	fakeWorkspace = &dir
+}
+
+func InitOwnedDir(){
+	currentUser, err := user.Current()
+	if err != nil {
+		fmt.Println("Error getting current user:", err)
+		os.Exit(1)
+	}
+	// if root, return
+	if currentUser.Uid == "0" {
+		return
+	}
+
+	dirs := []string{
+		"/teledeploy_secret",
+		"/teledeploy",
+	}
+	for _, dir := range dirs {
+		cmds:=[][]string{
+			{"mkdir","-p",dir},
+			{"chown",currentUser.Uid+":"+currentUser.Gid,"-R",dir},
+			{"chmod","700",dir},
+		}
+		for _, cmd := range cmds {
+			_,err:=ModRunCmd.NewBuilder(
+				cmd[0],cmd[1:]...).
+				// fmt.Sprintf(
+				// "mkdir -p %s && chown -R %s:%s %s && chmod 700 %s", 
+				// dir, currentUser.Uid, currentUser.Gid, dir, dir)
+				
+				WithRoot().
+				ShowProgress().
+				BlockRun()
+			if err != nil {
+				fmt.Println(color.RedString("Error creating and owning directory, err: %v", err))
+				os.Exit(1)
+			}
+		}
+	}
 }
 
 func WorkspaceDir() string {

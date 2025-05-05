@@ -318,7 +318,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 		// 1. 准备远程目录
 		if err := execRemoteCmd(
-			fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
+			fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
 			fmt.Sprintf("prepare remote %s secret directory", host),
 		); err != nil {
 			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
