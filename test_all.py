@@ -244,20 +244,46 @@ go mod tidy
     # 在 Docker 中运行测试脚本
     print("\n在 Docker 中运行测试...")
     cmd = [
-        "docker", "run", "--rm", "--name", "telego-container",
+        "docker", "run", 
         "--network=host",  # 使用宿主机网络
+    ]
+    
+    # 只初始化时在后台运行，并保留容器
+    if only_init:
+        cmd.extend(["-d", "--name", "telego-container"])
+    else:
+        cmd.append("--rm")  # 非初始化模式下运行完毕删除容器
+    
+    # 添加剩余的通用参数
+    cmd.extend([
         "-v", f"{current_dir}:/telego",
         "-w", "/telego",
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
         DOCKER_IMAGE,
         "/telego/docker_test.sh"
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"测试失败 - 标准输出:\n{result.stdout}")
-        print(f"测试失败 - 错误输出:\n{result.stderr}")
-        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
-    print(result.stdout)
+    ])
+
+    # 执行命令
+    if only_init:
+        # 在后台启动容器，只返回容器ID，不等待完成
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            container_id = result.stdout.strip()
+            print(f"Docker 容器已在后台启动，容器 ID: {container_id}")
+            return
+        except subprocess.CalledProcessError as e:
+            print(f"启动 Docker 容器失败 - 错误代码: {e.returncode}")
+            print(f"标准输出:\n{e.stdout}")
+            print(f"错误输出:\n{e.stderr}")
+            raise
+    else:
+        # 正常模式：等待容器执行完毕
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"测试失败 - 标准输出:\n{result.stdout}")
+            print(f"测试失败 - 错误输出:\n{result.stderr}")
+            raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+        print(result.stdout)
     
     # 清理测试脚本
     if os.path.exists("docker_test.sh"):
