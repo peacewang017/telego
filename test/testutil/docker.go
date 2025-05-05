@@ -180,6 +180,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 			{"apt-get", exec.Command("apt-get", "install", "-y", "sshpass")},
 			{"yum", exec.Command("yum", "install", "-y", "sshpass")},
 			{"dnf", exec.Command("dnf", "install", "-y", "sshpass")},
+			{"apk", exec.Command("apk", "add", "sshpass")},
 			{"brew", exec.Command("brew", "install", "sshpass")},
 		}
 		
