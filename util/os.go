@@ -18,6 +18,7 @@ import (
 // SystemType 系统类型接口
 type SystemType interface {
 	GetArchCmd() string
+	GetTypeName() string
 }
 
 // LinuxSystem Linux 系统类型
@@ -27,11 +28,19 @@ func (s LinuxSystem) GetArchCmd() string {
 	return "uname -m"
 }
 
+func (s LinuxSystem) GetTypeName() string {
+	return "Linux"
+}
+
 // WindowsSystem Windows 系统类型
 type WindowsSystem struct{}
 
 func (s WindowsSystem) GetArchCmd() string {
 	return "echo %PROCESSOR_ARCHITECTURE%"
+}
+
+func (s WindowsSystem) GetTypeName() string {
+	return "Windows"
 }
 
 // DarwinSystem macOS 系统类型
@@ -41,10 +50,18 @@ func (s DarwinSystem) GetArchCmd() string {
 	return "uname -m"
 }
 
+func (s DarwinSystem) GetTypeName() string {
+	return "macOS"
+}
+
 type UnknownSystem struct{}
 
 func (s UnknownSystem) GetArchCmd() string {
 	return ""
+}
+
+func (s UnknownSystem) GetTypeName() string {
+	return "Unknown"
 }
 
 func IsWindows() bool {

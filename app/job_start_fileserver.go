@@ -234,7 +234,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		fmt.Println(color.RedString("get remote sys failed %+v", remoteSys))
 		os.Exit(1)
 	}
-	fmt.Println(color.BlueString("remote sys we got: %v", remoteSys))
+	fmt.Println(color.BlueString("remote sys we got: %s", remoteSys[0].GetTypeName()))
 	
 	util.PrintStep("StartFileserver", color.BlueString("getting remote arch"))
 	arch := util.GetRemoteArch(mainNodeHostArr, mainnodePw, remoteSys)[0]

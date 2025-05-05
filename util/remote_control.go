@@ -109,8 +109,18 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 		cmd := currentSystems[i].GetArchCmd()
 		hostResults := StartRemoteCmds([]string{host}, cmd, usePasswd)
 		if len(hostResults) > 0 {
+			lines := strings.Split(hostResults[0], "\n")
+			// assert line count >=2
+			if len(lines) < 3 {
+				Logger.Warnf("Command output for host %s has fewer than 3 lines: %v", host, hostResults[0])
+				continue
+			}
+			
+			// 从第3行开始处理
+			result := strings.Join(lines[2:], "\n")
+			
 			// 清理结果
-			result := strings.ToLower(strings.TrimSpace(hostResults[0]))
+			result = strings.ToLower(strings.TrimSpace(result))
 			result = strings.ReplaceAll(result, "\n", "")
 			result = strings.ReplaceAll(result, "\r", "")
 			result = strings.ReplaceAll(result, " ", "")
@@ -127,7 +137,7 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 			results[i] = "unknown"
 		}
 	}
-
+	fmt.Printf("GetRemoteArch: %v", results)
 	Logger.Debugf("GetRemoteArch: %v", results)
 	return results
 }
