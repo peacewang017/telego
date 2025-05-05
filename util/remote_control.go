@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"reflect"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fatih/color"
@@ -168,7 +169,7 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 		}
 	}).([]SystemType)
 
-	fmt.Println(color.BlueString("GetRemoteSys type: %T", remoteSys))
+	fmt.Println(color.BlueString("GetRemoteSys type: %v", reflect.TypeOf(remoteSys[0])))
 	fmt.Println(color.BlueString("GetRemoteSys content: %+v", remoteSys))
 
 	return remoteSys

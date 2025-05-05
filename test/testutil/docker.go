@@ -187,12 +187,13 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		installed := false
 		for _, install := range installCommands {
 			t.Logf("尝试使用 %s 安装 sshpass...", install.name)
-			if err := RunCommand(t, install.cmd); err == nil {
+			err := RunCommand(t, install.cmd)
+			if  err == nil {
 				t.Logf("使用 %s 安装 sshpass 成功", install.name)
 				installed = true
 				break
 			} else {
-				t.Logf("使用 %s 安装 sshpass 失败", install.name)
+				t.Logf("使用 %s 安装 sshpass 失败, err: %w", install.name,err)
 			}
 		}
 		
@@ -270,5 +271,9 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 		}
 	}()
 
-	return cmd.Wait()
+	err:= cmd.Wait()
+	if err!=nil{
+		return fmt.Errorf("命令执行失败: %w, stdout: %s, stderr: %s", err, stdout, stderr)
+	}
+	return nil
 }
