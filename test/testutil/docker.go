@@ -106,6 +106,8 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 			"echo 'root:password' | chpasswd && "+
 			"useradd -m -s /bin/bash abc && "+
 			"echo 'abc:abc' | chpasswd && "+
+			"echo 'abc ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/abc && "+
+			"chmod 440 /etc/sudoers.d/abc && "+
 			"chown root:root /etc/ssh /etc/ssh/sshd_config && "+
 			"chmod 755 /etc/ssh && "+
 			"chmod 644 /etc/ssh/sshd_config && "+

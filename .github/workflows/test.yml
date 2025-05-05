@@ -30,8 +30,16 @@ jobs:
           docker info
           docker version
 
-      - name: Run tests
+      - name: "Step 1: 初始化环境"
         run: |
-          set -x  # 启用命令回显
-          python test_all.py 2>&1 | tee test_output.log
-        continue-on-error: true
+          python test_all.py --only-init 2>&1 | tee test_output_1_init.log
+      - name: "Step 2: build"
+        run: |
+          docker exec telego-container go test ./test/test1_build/build_test.go -v 2>&1 | tee test_output_2_build.log
+      - name: "Step 3: shortcut"
+        run: |
+          docker exec telego-container go test ./test/test2_build_and_run_shortcut/shortcut_test.go -v 2>&1 | tee test_output_3_shortcut.log
+      - name: "Step 4: config"
+        run: |
+          docker exec telego-container go test ./test/test3_main_node_config/config_test.go -v 2>&1 | tee test_output_4_config.log
+

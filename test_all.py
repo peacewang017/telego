@@ -163,8 +163,12 @@ def run_direct_tests():
         cmd = ["go", "test", "-v", test]
         subprocess.run(cmd, check=True)
 
-def run_in_docker():
-    """在 Docker 中运行测试"""
+def run_in_docker(only_init=False):
+    """在 Docker 中运行测试
+    
+    Args:
+        only_init: 如果为True，只初始化Docker容器而不运行测试
+    """
     # 先拉取基础镜像
     print(f"\n拉取基础镜像 {DOCKER_BASE_IMAGE}...")
     result = subprocess.run(["docker", "pull", DOCKER_BASE_IMAGE], capture_output=True, text=True)
@@ -218,15 +222,20 @@ set -e
 
 echo "Running go mod tidy..."
 go mod tidy
-
-echo "Running tests..."
 """
-    for test in TESTS["in_docker"]:
-        test_script += f'go test -v {test}\n'
-    
-    with open("docker_test.sh", "w") as f:
-        f.write(test_script)
-    os.chmod("docker_test.sh", 0o755)
+    if not only_init:
+        test_script += "echo 'Running tests...'\n"
+        for test in TESTS["in_docker"]:
+            test_script += f'go test -v {test}\n'
+        
+        with open("docker_test.sh", "w") as f:
+            f.write(test_script)
+        os.chmod("docker_test.sh", 0o755)
+    else:
+        test_script += "echo 'Initialized environment...'\n"
+        # block forever
+        # test_script += "while true; do sleep 1000; done\n"
+        test_script += "tail -f /dev/null\n"
     
     # 获取当前目录的绝对路径
     current_dir = os.path.abspath(".")
@@ -234,7 +243,7 @@ echo "Running tests..."
     # 在 Docker 中运行测试脚本
     print("\n在 Docker 中运行测试...")
     cmd = [
-        "docker", "run", "--rm",
+        "docker", "run", "--rm", "--name", "telego-container",
         "--network=host",  # 使用宿主机网络
         "-v", f"{current_dir}:/telego",
         "-w", "/telego",
@@ -308,7 +317,7 @@ def update_ci_workflow():
     # 构建测试步骤
     test_steps = [
         {
-            "name": "Step 1: 初始化环境",
+            "name": "\"Step 1: 初始化环境\"",
             "run": "python test_all.py --only-init 2>&1 | tee test_output_1_init.log"
         }
     ]
@@ -320,9 +329,9 @@ def update_ci_workflow():
         for i, test in enumerate(TESTS["direct"]):
             test_name = os.path.basename(test).replace("_test.go", "")
             test_steps.append({
-                "name": f"Step {step_index}: {test_name}",
+                "name": f"\"Step {step_index}: {test_name}\"",
                 "run": f"go test -v {test} 2>&1 | tee test_output_{step_index}_{test_name}.log",
-                "continue-on-error": True
+                # "continue-on-error": True
             })
             step_index += 1
     
@@ -331,9 +340,9 @@ def update_ci_workflow():
         for i, test in enumerate(TESTS["in_docker"]):
             test_name = os.path.basename(test).replace("_test.go", "")
             test_steps.append({
-                "name": f"Step {step_index}: {test_name}",
-                "run": f"python -c 'import test_all; test_all.run_docker_test(\"{test}\")' 2>&1 | tee test_output_{step_index}_{test_name}.log",
-                "continue-on-error": True
+                "name": f"\"Step {step_index}: {test_name}\"",
+                "run": f"docker exec telego-container go test ./{test} -v 2>&1 | tee test_output_{step_index}_{test_name}.log",
+                # "continue-on-error": True
             })
             step_index += 1
     
