@@ -235,6 +235,7 @@ echo "Running tests..."
     print("\n在 Docker 中运行测试...")
     cmd = [
         "docker", "run", "--rm",
+        "--network=host",  # 使用宿主机网络
         "-v", f"{current_dir}:/telego",
         "-w", "/telego",
         "-v", "/var/run/docker.sock:/var/run/docker.sock",

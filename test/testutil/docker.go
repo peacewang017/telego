@@ -94,7 +94,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// 安装SSH服务器
 	t.Log("RunSSHDocker 安装SSH服务器")
 	installSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
-		"apt-get update && apt-get install -y openssh-server sshpass && mkdir -p /run/sshd")
+		"apt-get update && apt-get install -y openssh-server && mkdir -p /run/sshd")
 	if err := RunCommand(t, installSSHCmd); err != nil {
 		t.Fatalf("安装SSH服务器失败: %v", err)
 	}
@@ -165,8 +165,50 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 测试 SSH 访问 (用户 abc，使用密码认证)
 	t.Log("RunSSHDocker 测试SSH密码认证")
+	// install sshpass first
+	
+	// 检查 sshpass 是否安装
+	checkCmd := exec.Command("which", "sshpass")
+	if err := checkCmd.Run(); err != nil {
+		t.Log("sshpass 未安装，尝试安装...")
+		
+		// 定义要尝试的包管理器命令
+		installCommands := []struct {
+			name string
+			cmd  *exec.Cmd
+		}{
+			{"apt-get", exec.Command("apt-get", "install", "-y", "sshpass")},
+			{"yum", exec.Command("yum", "install", "-y", "sshpass")},
+			{"dnf", exec.Command("dnf", "install", "-y", "sshpass")},
+			{"brew", exec.Command("brew", "install", "sshpass")},
+		}
+		
+		// 尝试每个包管理器
+		installed := false
+		for _, install := range installCommands {
+			t.Logf("尝试使用 %s 安装 sshpass...", install.name)
+			if err := RunCommand(t, install.cmd); err == nil {
+				t.Logf("使用 %s 安装 sshpass 成功", install.name)
+				installed = true
+				break
+			} else {
+				t.Logf("使用 %s 安装 sshpass 失败", install.name)
+			}
+		}
+		
+		// 检查是否安装成功
+		if !installed {
+			t.Fatal("所有安装方法都失败，请手动安装 sshpass 后重试")
+		}
+		
+		// 再次检查 sshpass 是否可用
+		if err := exec.Command("which", "sshpass").Run(); err != nil {
+			t.Fatal("sshpass 安装后仍然不可用")
+		}
+	}
+
 	// 使用sshpass工具自动提供密码
-	sshCmd = exec.Command("docker", "exec", containerID, "sshpass", "-p", "abc", 
+	sshCmd = exec.Command("sshpass", "-p", "abc", 
 		"ssh", "abc@localhost", "-p", "2222", 
 		"-o", "StrictHostKeyChecking=no", 
 		"-o", "UserKnownHostsFile=/dev/null", "echo", "helloworld")
