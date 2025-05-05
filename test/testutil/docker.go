@@ -271,7 +271,7 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 		}
 	}()
 
-	err:= cmd.Wait()
+	err= cmd.Wait()
 	if err!=nil{
 		return fmt.Errorf("命令执行失败: %w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
