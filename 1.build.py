@@ -110,6 +110,14 @@ def os_system_sure(command):
 def os_system(command):
     return run_command(command, check=False)
 
+def pull_if_not_present(image: str):
+    r = subprocess.run(["docker", "image", "inspect", image], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if r.returncode != 0:
+        print(f"Pulling {image}...")
+        subprocess.run(["docker", "pull", image], check=True)
+    else:
+        print(f"{image} already exists locally.")
+
 # 启动时检查是否为docker ubuntu18.04
 def check_ubuntu_version():
     os_release_file = "/etc/os-release"
@@ -157,7 +165,8 @@ if not check_ubuntu_version():
                 os.environ['https_proxy']=PROXY_ADDR
             recover_proxy=r
             
-    os_system_sure("docker pull ubuntu:18.04")
+    pull_if_not_present("ubuntu:18.04")
+    # os_system_sure("docker pull ubuntu:18.04")
 
     # 创建dockerfile
     with open("build/Dockerfile", "w") as f:

@@ -143,6 +143,16 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 	Logger.Debugf("GetRemoteSys: %v", results)
 
 	remoteSys := funk.Map(results, func(result string) SystemType {
+		// remove first 2 line
+		lines := strings.Split(result, "\n")
+		// assert line count >=2
+		if len(lines) < 3 {
+			Logger.Warnf("Command output has fewer than 3 lines: %v", result)
+			return UnknownSystem{}
+		}
+		
+		result = strings.Join(lines[2:], "\n")
+
 		// 清理结果
 		result = strings.ToLower(strings.TrimSpace(result))
 		result = strings.ReplaceAll(result, "\n", "")
@@ -158,13 +168,6 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 		case "windows":
 			return WindowsSystem{}
 		default:
-			// 如果 uname 命令失败，尝试使用其他方法
-			// 检查是否存在 Windows 特有的环境变量
-			winCheck := StartRemoteCmds(hosts, "echo %OS%", usePasswd)
-			if len(winCheck) > 0 && strings.Contains(strings.ToLower(winCheck[0]), "windows") {
-				return WindowsSystem{}
-			}
-			// 其他所有系统都返回 Unknown
 			return UnknownSystem{}
 		}
 	}).([]SystemType)
