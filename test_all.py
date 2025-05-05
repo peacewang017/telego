@@ -228,15 +228,16 @@ go mod tidy
         for test in TESTS["in_docker"]:
             test_script += f'go test -v {test}\n'
         
-        with open("docker_test.sh", "w") as f:
-            f.write(test_script)
-        os.chmod("docker_test.sh", 0o755)
     else:
         test_script += "echo 'Initialized environment...'\n"
         # block forever
         # test_script += "while true; do sleep 1000; done\n"
         test_script += "tail -f /dev/null\n"
     
+    with open("docker_test.sh", "w") as f:
+        f.write(test_script)
+    os.chmod("docker_test.sh", 0o755)
+
     # 获取当前目录的绝对路径
     current_dir = os.path.abspath(".")
     
