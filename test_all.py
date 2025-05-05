@@ -383,6 +383,7 @@ if __name__ == "__main__":
         
         if args.only_init:
             initialization()
+            run_in_docker(only_init=True)
             print("初始化完成，退出...")
             sys.exit(0)
         
