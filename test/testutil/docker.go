@@ -231,20 +231,25 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 	t.Logf("\n>>> 运行命令: %v", cmd.Args)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		t.Logf("run command get stdout err %v", err)
 		return err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		t.Logf("run command get stderr err %v", err)
 		return err
 	}
 
 	if err := cmd.Start(); err != nil {
+		t.Logf("run command start err %v", err)
 		return err
 	}
 
 	stdoutReader := bufio.NewReader(stdout)
 	stderrReader := bufio.NewReader(stderr)
 
+	stdoutStr:=""
+	stderrStr:=""
 	go func() {
 		for {
 			line, err := stdoutReader.ReadString('\n')
@@ -255,6 +260,7 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 				break
 			}
 			t.Log(line)
+			stdoutStr+=line+"\n"
 		}
 	}()
 
@@ -268,12 +274,15 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 				break
 			}
 			t.Log(line)
+			stderrStr+=line+"\n"
 		}
 	}()
 
 	err= cmd.Wait()
 	if err!=nil{
-		return fmt.Errorf("命令执行失败: %w, stdout: %s, stderr: %s", err, stdout, stderr)
+		t.Logf("run command wait err %v, stdout: %s, stderr: %s", err, stdoutStr, stderrStr)
+		return fmt.Errorf("命令执行失败: %w, stdout: %s, stderr: %s", 
+			err, stdoutStr, stderrStr)
 	}
 	return nil
 }
