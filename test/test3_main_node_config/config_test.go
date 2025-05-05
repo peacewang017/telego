@@ -25,7 +25,10 @@ func TestSSHKeyGeneration(t *testing.T) {
 	}
 
 	// 测试 SSH 连接
-	sshCmd := exec.Command("ssh", "-p", "2222", util.MainNodeUser+"@"+util.MainNodeIp, "echo", "test")
+	sshCmd := exec.Command("ssh", 
+		"-o", "StrictHostKeyChecking=no", 
+		"-o", "UserKnownHostsFile=/dev/null", 
+		"-p", "2222", util.MainNodeUser+"@"+util.MainNodeIp, "echo", "test")
 	if err := testutil.RunCommand(t, sshCmd); err != nil {
 		t.Fatalf("SSH 连接 abc 测试失败: %v", err)
 	}
