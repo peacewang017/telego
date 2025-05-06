@@ -221,7 +221,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		os.Exit(1)
 	}
 
-	mainNodeHostArr := []string{fmt.Sprintf("%s@%s", util.MainNodeUser, util.MainNodeIp)}
+	mainNodeHostArr := []string{fmt.Sprintf("%s@%s:%s", util.MainNodeUser, util.MainNodeIp, util.MainNodeSshPort)}
 
 	util.PrintStep("StartFileserver", color.BlueString("getting remote sys"))
 	remoteSys := util.GetRemoteSys(mainNodeHostArr, mainnodePw)
