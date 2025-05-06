@@ -64,7 +64,11 @@ func (i *MenuItem) DispatchExec(prefixNodes []*MenuItem) DispatchExecRes {
 	}).([]string), "/")
 	util.Logger.Debugf("DispatchExec {%v}, prefixes: {%v}", i, currentPath)
 	var parentNode *MenuItem = nil
-	if len(prefixNodes) > 1 {
+	// remove root menu
+	if prefixNodes[0].Name == "主菜单" {
+		prefixNodes = prefixNodes[1:]
+	}
+	if len(prefixNodes) > 0 {
 		parentNode = prefixNodes[len(prefixNodes)-1]
 	}
 	// current := prefixNodes[len(prefixNodes)-2]
@@ -153,7 +157,7 @@ func (i *MenuItem) DispatchExec(prefixNodes []*MenuItem) DispatchExecRes {
 
 		// }
 	} else {
-		util.Logger.Warnf("can not find any handler for %+v", i)
+		util.Logger.Warnf("can not find any handler for %+v, parentNode %+v", i, parentNode)
 	}
 
 	return DispatchExecRes{}
