@@ -35,13 +35,23 @@ func getMostRecentLog(t *testing.T, logDir string, filter func(string) bool) str
 }
 
 func GetMostRecentRemoteLog(t *testing.T) string {
-	return getMostRecentLog(t, "/teledeploy_secret/logs", func(file string) bool {
+	f := getMostRecentLog(t, "/teledeploy_secret/logs", func(file string) bool {
 		return strings.HasPrefix(file, "remote_")
 	})
+	content, err := os.ReadFile(f)
+	if err != nil {
+		t.Fatalf("Error reading log file: %v", err)
+	}
+	return string(content)
 }
 
 func GetMostRecentLog(t *testing.T) string {
-	return getMostRecentLog(t, "/teledeploy_secret/logs", func(file string) bool {
+	f := getMostRecentLog(t, "/teledeploy_secret/logs", func(file string) bool {
 		return !strings.HasPrefix(file, "remote_")
 	})
+	content, err := os.ReadFile(f)
+	if err != nil {
+		t.Fatalf("Error reading log file: %v", err)
+	}
+	return string(content)
 }
