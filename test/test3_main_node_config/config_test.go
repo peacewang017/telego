@@ -1,7 +1,6 @@
 package test3_main_node_config
 
 import (
-	"os"
 	"os/exec"
 	"telego/test/testutil"
 	"telego/util"
@@ -15,8 +14,15 @@ func TestSSHKeyGeneration(t *testing.T) {
 	_, cleanup := testutil.RunSSHDocker(t)
 	defer cleanup()
 
-	// 生成 SSH 密钥
-	os.Setenv("SSH_PW", util.MainNodeUser)
+	// os.Setenv("SSH_PW", util.MainNodeUser)
+	// passthrough password input
+	err := util.WriteAdminUserConfig(&util.AdminUserConfig{
+		Username: util.MainNodeUser,
+		Password: util.MainNodeUser,
+	})
+	if err != nil {
+		t.Fatalf("写入管理员用户配置失败: %v", err)
+	}
 
 	// // suppose to be failed
 	// cmd := exec.Command("telego", "cmd", "--cmd", "/update_config/ssh_config/1.gen_or_get_key")
@@ -31,7 +37,7 @@ func TestSSHKeyGeneration(t *testing.T) {
 	// init fileserver
 	cmd := exec.Command("telego", "cmd", "--cmd", "/update_config/start_mainnode_fileserver")
 	cmd.Dir = projectRoot
-	if err := testutil.RunCommand(t, cmd); err != nil {
+	if err = testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("初始化main node file server失败: %v", err)
 	}
 

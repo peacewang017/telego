@@ -111,8 +111,6 @@ WantedBy=multi-user.target
 				ExecStart:        "/usr/bin/python3 -m http.server 8003", // 替换为实际路径和端口
 			}
 
-
-
 			//  // mkdir /teledeploy
 			util.PrintStep("StartFileserver", color.BlueString("mkdir /teledeploy"))
 			util.ModRunCmd.NewBuilder("mkdir", "-p", "/teledeploy").WithRoot().BlockRun()
@@ -189,12 +187,12 @@ func (m ModJobStartFileserverStruct) ExecDelegate(sshModeStr string) DispatchExe
 	return DispatchExecRes{
 		Exit: true,
 		ExitWithDelegate: func() {
-			util.PrintStep("StartFileserver", color.BlueString("Starting job ssh... cmds[%v]", cmd))
+			util.PrintStep("StartFileserver", color.BlueString("Starting job StartFileserver... cmds[%v]", cmd))
 			_, err := util.ModRunCmd.ShowProgress(cmd[0], cmd[1:]...).BlockRun()
 			if err != nil {
-				fmt.Println(color.RedString("job ssh error: %v", err))
+				fmt.Println(color.RedString("job StartFileserver error: %v", err))
 			}
-			fmt.Println(color.GreenString("job ssh finished"))
+			fmt.Println(color.GreenString("job StartFileserver finished"))
 		},
 	}
 }
@@ -215,8 +213,8 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 	}
 
 	// ssh to main node and start the fileserver
-	mainnodePw,ok := util.GetPassword("启动 MAIN_NODE 需要输入 MAIN_NODE密码")
-	
+	mainnodePw, ok := util.GetPassword("启动 MAIN_NODE 需要输入 MAIN_NODE密码")
+
 	if !ok {
 		fmt.Println("User canceled start fileserver")
 		os.Exit(1)
@@ -234,7 +232,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		os.Exit(1)
 	}
 	fmt.Println(color.BlueString("remote sys we got: %s", remoteSys[0].GetTypeName()))
-	
+
 	util.PrintStep("StartFileserver", color.BlueString("getting remote arch"))
 	arch := util.GetRemoteArch(mainNodeHostArr, mainnodePw, remoteSys)[0]
 
@@ -267,7 +265,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 
 		// try request http fileserver http://{MAIN_NODE_IP}:8003
 		util.PrintStep("StartFileserver", color.BlueString("checking fileserver"))
-		_,err:=util.HttpGetUrlContent(fmt.Sprintf("http://%s:8003", util.MainNodeIp))
+		_, err := util.HttpGetUrlContent(fmt.Sprintf("http://%s:8003", util.MainNodeIp))
 		if err != nil {
 			fmt.Println(color.RedString("fileserver not started, err: %v", err))
 			os.Exit(1)
