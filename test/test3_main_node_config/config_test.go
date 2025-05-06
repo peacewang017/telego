@@ -39,6 +39,9 @@ func TestSSHKeyGeneration(t *testing.T) {
 	cmd := testutil.NewPtyCommand(t, "telego", "cmd", "--cmd", "/update_config/start_mainnode_fileserver")
 	cmd.Dir = projectRoot
 	if err = testutil.RunCommand(t, cmd); err != nil {
+		// debug telego log
+		t.Logf("telego log for start main node file server:\n %s",
+			testutil.GetMostRecentLog(t, projectRoot))
 		t.Fatalf("初始化main node file server失败: %v", err)
 	}
 
@@ -46,6 +49,9 @@ func TestSSHKeyGeneration(t *testing.T) {
 	cmd = testutil.NewPtyCommand(t, "telego", "cmd", "--cmd", "/update_config/ssh_config/1.gen_or_get_key")
 	cmd.Dir = projectRoot
 	if err := testutil.RunCommand(t, cmd); err != nil {
+		// debug telego log
+		t.Logf("telego log for gen or get key:\n %s",
+			testutil.GetMostRecentLog(t, projectRoot))
 		t.Fatalf("重新生成 SSH 密钥失败: %v", err)
 	}
 
