@@ -40,7 +40,7 @@ func (l *LinuxInstall) Install(t *testing.T) {
 	}
 
 	for _, cmd := range cmds {
-		if err := RunCommand(t, exec.Command("bash", "-c", cmd)); err != nil {
+		if err := RunCommand(t, exec.Command(cmd)); err != nil {
 			t.Fatalf("安装 %s 失败: %v", l.DefaultAppName, err)
 		} else {
 			t.Logf("安装 %s 成功", l.DefaultAppName)
