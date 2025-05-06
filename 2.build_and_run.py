@@ -67,4 +67,5 @@ else:
     cmd = [f"./dist/telego_{cursys}_{curarch}"] + cmd_args
 
 # 使用改进的os_system函数执行命令
-os_system(cmd)
+if os_system(cmd) != 0:
+    raise Exception("run failed")
