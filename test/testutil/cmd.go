@@ -18,7 +18,7 @@ func NewPtyCommand(t *testing.T, name string, args ...string) *exec.Cmd {
 		err := cmd.Run()
 		if err != nil {
 			// install script tool
-			(&LinuxInstall{DefaultAppName: "script"}).Install(t)
+			(&LinuxInstall{DefaultAppName: "util-linux", SpecAptName: "bsdutils"}).Install(t)
 		}
 	}
 
