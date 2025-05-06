@@ -2,6 +2,7 @@ package test3_main_node_config
 
 import (
 	"os/exec"
+	"path"
 	"telego/test/testutil"
 	"telego/util"
 	"testing"
@@ -10,6 +11,13 @@ import (
 func TestSSHKeyGeneration(t *testing.T) {
 	projectRoot := testutil.GetProjectRoot(t)
 
+	// copy compiled telego to /usr/bin/telego
+	distPath := path.Join(projectRoot, "dist/telego_linux_"+util.GetCurrentArch())
+	_, err := util.ModRunCmd.NewBuilder("cp", distPath, "/usr/bin/telego").BlockRun()
+	if err != nil {
+		t.Fatalf("复制telego失败: %v", err)
+	}
+
 	// 启动 SSH 测试容器
 	_, _ = testutil.RunSSHDocker(t)
 	// we don't need to cleanup here, because we will use it in later tests
@@ -17,7 +25,7 @@ func TestSSHKeyGeneration(t *testing.T) {
 
 	// os.Setenv("SSH_PW", util.MainNodeUser)
 	// passthrough password input
-	err := util.WriteAdminUserConfig(&util.AdminUserConfig{
+	err = util.WriteAdminUserConfig(&util.AdminUserConfig{
 		Username: util.MainNodeUser,
 		Password: util.MainNodeUser,
 	})
