@@ -349,6 +349,13 @@ func (c *ConfCacheStruct) cacheSecret(k SecretConfType, v string) {
 }
 
 func (r MainNodeConfReader) ReadPubConf(path0 PubConfType) (string, error) {
+	if !FileServerAccessible() {
+		fmt.Println(color.RedString(
+			"file server is not accessible, " +
+				"please first init file server with 'telego cmd --cmd /update_config/start_mainnode_fileserver'"))
+		os.Exit(1)
+	}
+
 	cached := ConfCache.tryReadPub(path0)
 	if cached != nil {
 		return *cached, nil
@@ -367,6 +374,13 @@ func (r MainNodeConfReader) ReadPubConf(path0 PubConfType) (string, error) {
 }
 
 func (r MainNodeConfReader) ReadSecretConf(path0 SecretConfType) (string, error) {
+	if !FileServerAccessible() {
+		fmt.Println(color.RedString(
+			"file server is not accessible, " +
+				"please first init file server with 'telego cmd --cmd /update_config/start_mainnode_fileserver'"))
+		os.Exit(1)
+	}
+
 	cached := ConfCache.tryReadSecret(path0)
 	if cached != nil {
 		return *cached, nil

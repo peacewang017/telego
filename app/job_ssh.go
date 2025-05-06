@@ -22,7 +22,7 @@ import (
 type SshMode = int
 
 const (
-	SshModeGenOrGetKey = iota
+	SshModeGenOrGetKey  = iota
 	SshModeSetupCluster // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
 	SshModeSetupThisNode
 )
@@ -156,7 +156,15 @@ func (m ModJobSshStruct) setupThisNode(pubkey string) {
 }
 
 func (m ModJobSshStruct) genOrGetKey() {
-	util.PrintStep("job ssh","genOrGetKey started")
+	util.PrintStep("job ssh", "genOrGetKey started")
+
+	if !util.FileServerAccessible() {
+		fmt.Println(color.RedString(
+			"file server is not accessible, " +
+				"please first init file server with 'telego cmd --cmd /update_config/start_mainnode_fileserver'"))
+		os.Exit(1)
+	}
+
 	fail := false
 	failInfo := ""
 	defer func() {
@@ -278,7 +286,6 @@ func (m ModJobSshStruct) genOrGetKey() {
 		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPrivate{}, string(localpri))
 	}
 }
-
 
 // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
 func (m ModJobSshStruct) setupCluster() {
