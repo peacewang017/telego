@@ -11,8 +11,9 @@ func TestSSHKeyGeneration(t *testing.T) {
 	projectRoot := testutil.GetProjectRoot(t)
 
 	// 启动 SSH 测试容器
-	_, cleanup := testutil.RunSSHDocker(t)
-	defer cleanup()
+	_, _ = testutil.RunSSHDocker(t)
+	// we don't need to cleanup here, because we will use it in later tests
+	// defer cleanup()
 
 	// os.Setenv("SSH_PW", util.MainNodeUser)
 	// passthrough password input
@@ -35,14 +36,14 @@ func TestSSHKeyGeneration(t *testing.T) {
 	// }
 
 	// init fileserver
-	cmd := exec.Command("telego", "cmd", "--cmd", "/update_config/start_mainnode_fileserver")
+	cmd := testutil.NewPtyCommand("telego", "cmd", "--cmd", "/update_config/start_mainnode_fileserver")
 	cmd.Dir = projectRoot
 	if err = testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("初始化main node file server失败: %v", err)
 	}
 
 	// 重新生成 SSH 密钥
-	cmd = exec.Command("telego", "cmd", "--cmd", "/update_config/ssh_config/1.gen_or_get_key")
+	cmd = testutil.NewPtyCommand("telego", "cmd", "--cmd", "/update_config/ssh_config/1.gen_or_get_key")
 	cmd.Dir = projectRoot
 	if err := testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("重新生成 SSH 密钥失败: %v", err)

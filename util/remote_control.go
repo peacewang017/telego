@@ -18,9 +18,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
-	"reflect"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fatih/color"
@@ -115,10 +115,10 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 				Logger.Warnf("Command output for host %s has fewer than 3 lines: %v", host, hostResults[0])
 				continue
 			}
-			
+
 			// 从第3行开始处理
 			result := strings.Join(lines[2:], "\n")
-			
+
 			// 清理结果
 			result = strings.ToLower(strings.TrimSpace(result))
 			result = strings.ReplaceAll(result, "\n", "")
@@ -160,7 +160,7 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 			Logger.Warnf("Command output has fewer than 3 lines: %v", result)
 			return UnknownSystem{}
 		}
-		
+
 		result = strings.Join(lines[2:], "\n")
 
 		// 清理结果
@@ -527,7 +527,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 	// 启动 TUI
 	if err := program.Start(); err != nil {
-		fmt.Println("Error starting program:", err)
+		fmt.Println("Error starting remote cmds program:", err)
 	}
 
 	return outputs
