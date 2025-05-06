@@ -1,4 +1,3 @@
-
 package testutil
 
 import (
@@ -19,18 +18,18 @@ func GetProjectRoot(t *testing.T) string {
 	// 从当前目录开始向上遍历
 	currentDir := filepath.Dir(filename)
 	for {
-		// 检查是否存在所需文件
+		// 检查是否存在所需文件aok
 		genMenuPath := filepath.Join(currentDir, "gen_menu.py")
 		setupPath := filepath.Join(currentDir, "0.setup_build_and_run_shortcut.py")
-		
+
 		_, genMenuErr := os.Stat(genMenuPath)
 		_, setupErr := os.Stat(setupPath)
-		
+
 		if genMenuErr == nil && setupErr == nil {
 			t.Logf("找到项目根目录: %s", currentDir)
 			return currentDir
 		}
-		
+
 		// 获取父目录
 		parentDir := filepath.Dir(currentDir)
 		if parentDir == currentDir {
@@ -39,4 +38,4 @@ func GetProjectRoot(t *testing.T) string {
 		}
 		currentDir = parentDir
 	}
-} 
+}

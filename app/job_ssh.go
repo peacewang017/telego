@@ -364,6 +364,7 @@ func (m ModJobSshStruct) ExecDelegate(sshModeStr string) DispatchExecRes {
 			_, err := util.ModRunCmd.ShowProgress(cmd[0], cmd[1:]...).BlockRun()
 			if err != nil {
 				fmt.Println(color.RedString("job ssh error: %v", err))
+				os.Exit(1)
 			}
 			fmt.Println(color.GreenString("job ssh finished"))
 		},

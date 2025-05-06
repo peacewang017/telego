@@ -40,10 +40,10 @@ func getMostRecentLog(logDir string, filter func(string) bool) string {
 }
 
 func GetMostRecentRemoteLog() string {
-	f := getMostRecentLog("/teledeploy_secret/logs", func(file string) bool {
+	f := getMostRecentLog(LogDir(), func(file string) bool {
 		return strings.HasPrefix(file, "remote_")
 	})
-	content, err := os.ReadFile(f)
+	content, err := os.ReadFile(path.Join(LogDir(), f))
 	if err != nil {
 		fmt.Println(color.RedString("Error reading log file: %v", err))
 		os.Exit(1)
@@ -52,10 +52,11 @@ func GetMostRecentRemoteLog() string {
 }
 
 func GetMostRecentLog() string {
-	f := getMostRecentLog("/teledeploy_secret/logs", func(file string) bool {
+
+	f := getMostRecentLog(LogDir(), func(file string) bool {
 		return !strings.HasPrefix(file, "remote_")
 	})
-	content, err := os.ReadFile(f)
+	content, err := os.ReadFile(path.Join(LogDir(), f))
 	if err != nil {
 		fmt.Println(color.RedString("Error reading log file: %v", err))
 		os.Exit(1)
