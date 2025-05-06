@@ -1,0 +1,52 @@
+package util
+
+import (
+	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/fatih/color"
+)
+
+func getMostRecentLog(logDir string, filter func(string) bool) string {
+	files, err := filepath.Glob(path.Join(logDir, "*.log"))
+	if err != nil {
+		errMsg := color.RedString("Error listing log files: %v", err)
+		fmt.Println(errMsg)
+		os.Exit(1)
+	}
+	mostRecentFile := ""
+	mostRecentTime := time.Time{}
+	for _, file := range files {
+		if !filter(file) {
+			continue
+		}
+		info, err := os.Stat(file)
+		if err != nil {
+			errMsg := color.RedString("Error getting file info: %v", err)
+			fmt.Println(errMsg)
+			os.Exit(1)
+		}
+
+		if info.ModTime().After(mostRecentTime) {
+			mostRecentTime = info.ModTime()
+			mostRecentFile = file
+		}
+	}
+	return mostRecentFile
+}
+
+func GetMostRecentRemoteLog() string {
+	return getMostRecentLog("/teledeploy_secret/logs", func(file string) bool {
+		return strings.HasPrefix(file, "remote_")
+	})
+}
+
+func GetMostRecentLog() string {
+	return getMostRecentLog("/teledeploy_secret/logs", func(file string) bool {
+		return !strings.HasPrefix(file, "remote_")
+	})
+}

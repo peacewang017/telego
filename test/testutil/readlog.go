@@ -34,14 +34,14 @@ func getMostRecentLog(t *testing.T, logDir string, filter func(string) bool) str
 	return mostRecentFile
 }
 
-func GetMostRecentRemoteLog(t *testing.T, logDir string) string {
-	return getMostRecentLog(t, logDir, func(file string) bool {
+func GetMostRecentRemoteLog(t *testing.T) string {
+	return getMostRecentLog(t, "/teledeploy_secret/logs", func(file string) bool {
 		return strings.HasPrefix(file, "remote_")
 	})
 }
 
-func GetMostRecentLog(t *testing.T, logDir string) string {
-	return getMostRecentLog(t, logDir, func(file string) bool {
+func GetMostRecentLog(t *testing.T) string {
+	return getMostRecentLog(t, "/teledeploy_secret/logs", func(file string) bool {
 		return !strings.HasPrefix(file, "remote_")
 	})
 }

@@ -230,6 +230,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		return isUnknown
 	}) {
 		fmt.Println(color.RedString("get remote sys failed %+v", remoteSys))
+		fmt.Println(color.RedString("remote log: %s", util.GetMostRecentRemoteLog()))
 		os.Exit(1)
 	}
 	fmt.Println(color.BlueString("remote sys we got: %s", remoteSys[0].GetTypeName()))
