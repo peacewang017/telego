@@ -7,7 +7,8 @@ import (
 )
 
 func TestRemoteCmd(t *testing.T) {
-	res, logfile := util.StartRemoteCmds([]string{util.MainNodeIp}, "echo helloworld", util.MainNodeUser)
+	res, logfile := util.StartRemoteCmds([]string{
+		util.MainNodeUser + "@" + util.MainNodeIp + ":" + util.MainNodeSshPort}, "echo helloworld", util.MainNodeUser)
 	// if lines < 3, fatal with log
 	{
 		lines := len(res[0])
