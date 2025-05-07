@@ -355,13 +355,11 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	// 	fmt.Println(color.RedString("read logfdebug failed: %v", err))
 	// 	os.Exit(1)
 	// }
-	srcs := []string{output[0]}
-	keywords := []string{"Error Process exited"}
-	if funk.Any(srcs, func(src string) bool {
-		return funk.Any(keywords, func(keyword string) bool {
-			return strings.Contains(src, keyword)
-		})
-	}) {
+	util.PrintStep("ssh setupClusterInner", color.BlueString("setup remote output: %v", output))
+
+	// srcs := []string{output[0]}
+	// keywords := []string{"Error Process exited"}
+	if strings.Contains(output[0], "Error Process exited") {
 		fmt.Println(color.RedString("ssh setup remote pubkey error: %v", output))
 		logf, _ := os.ReadFile(logfps[0])
 		fmt.Println(color.RedString("remote log: %v", string(logf)))
