@@ -107,7 +107,7 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 	results := make([]string, len(hosts))
 	for i, host := range hosts {
 		cmd := currentSystems[i].GetArchCmd()
-		hostResults := StartRemoteCmds([]string{host}, cmd, usePasswd)
+		hostResults, _ := StartRemoteCmds([]string{host}, cmd, usePasswd)
 		if len(hostResults) > 0 {
 			lines := strings.Split(hostResults[0], "\n")
 			// assert line count >=2
@@ -147,17 +147,25 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 // usePasswd: 密码
 func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 	// 使用 uname 命令获取系统信息
-	results := StartRemoteCmds(hosts, "uname -s", usePasswd)
+	results, logpaths := StartRemoteCmds(hosts, "uname -s", usePasswd)
 
 	fmt.Println(color.BlueString("GetRemoteSys raw output: %v", results))
-	Logger.Debugf("GetRemoteSys: %v", results)
+	// Logger.Debugf("GetRemoteSys: %v", results)
 
+	i := 0
 	remoteSys := funk.Map(results, func(result string) SystemType {
 		// remove first 2 line
 		lines := strings.Split(result, "\n")
 		// assert line count >=2
 		if len(lines) < 3 {
-			Logger.Warnf("Command output has fewer than 3 lines: %v", result)
+			errMsg := fmt.Sprintf("Command output has fewer than 3 lines: %v", result)
+			Logger.Warnf(errMsg)
+			logContet, err := os.ReadFile(logpaths[i])
+			if err != nil {
+				fmt.Println(color.BlueString("%s\n and we failed to read remote log"), errMsg)
+			} else {
+				fmt.Println(color.BlueString("%s,\n log content read: \n %s", errMsg, string(logContet)))
+			}
 			return UnknownSystem{}
 		}
 
@@ -169,6 +177,7 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 		result = strings.ReplaceAll(result, "\r", "")
 		result = strings.ReplaceAll(result, " ", "")
 
+		i += 1
 		// 判断系统类型
 		switch result {
 		case "linux", "gnu/linux", "gnu":
@@ -180,6 +189,7 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 		default:
 			return UnknownSystem{}
 		}
+
 	}).([]SystemType)
 
 	fmt.Println(color.BlueString("GetRemoteSys type: %v", reflect.TypeOf(remoteSys[0])))
@@ -230,10 +240,12 @@ func createUserConfigs(hosts []string, usePasswd string) error {
 	return nil
 }
 
+type LogPathStr = string
+
 // hosts format is {user}@{ip}
 // left usePasswd to "" if you want to use key
 // return output if success
-func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []string {
+func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]string, []LogPathStr) {
 	fmt.Println()
 	Logger.Debugf("Starting remote command: %s", remoteCmd)
 
@@ -472,6 +484,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 	model := RemoteControlModel{Nodes: nodes}
 	program := tea.NewProgram(model)
 
+	logPaths := make([]LogPathStr, len(hosts))
 	// 并行执行远程指令
 	msgCh := make(chan NodeMsg)
 	var wg sync.WaitGroup
@@ -488,7 +501,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 					break
 				}
 			}
-
+			logPaths[i] = path0
 			runRemoteCommand(host, index, path0, msgCh, remoteCmd)
 		}(i, host)
 	}
@@ -545,5 +558,5 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		fmt.Println("Error starting remote cmds program:", err)
 	}
 
-	return outputs
+	return outputs, logPaths
 }

@@ -33,7 +33,7 @@ func (d DistributeDeployerK3s) CheckMaster(conf clusterconf.ClusterConfYmlModel)
 		},
 	).([]string)
 
-	remoteResults := util.StartRemoteCmds(
+	remoteResults, _ := util.StartRemoteCmds(
 		hosts,
 		"k3s kubectl get nodes --selector='node-role.kubernetes.io/master'",
 		"",
@@ -96,7 +96,7 @@ func (d DistributeDeployerK3s) CheckWorker(conf clusterconf.ClusterConfYmlModel)
 			},
 		).([]string)
 
-		remoteResults := util.StartRemoteCmds(
+		remoteResults, _ := util.StartRemoteCmds(
 			hosts,
 			"k3s kubectl get nodes",
 			"",
@@ -245,7 +245,7 @@ type GeneralSetupCtx struct {
 func (d DistributeDeployerK3s) PrepareWorkerSetupCtxBase64(masters []clusterconf.NodeInfo, conf clusterconf.ClusterConfYmlModel) (string, error) {
 	util.PrintStep("PrepareWorkerSetupCtxBase64", "getting token from master node")
 	masterHost := fmt.Sprintf("%s@%s", conf.Global.SshUser, masters[0].Ip)
-	res := util.StartRemoteCmds(
+	res, _ := util.StartRemoteCmds(
 		[]string{masterHost},
 		"cat /var/lib/rancher/k3s/server/token",
 		"",

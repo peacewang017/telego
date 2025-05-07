@@ -206,7 +206,7 @@ func (m ModDistributeDeployStruct) setupMasters(d DistributeDeployer, targetMast
 		}).([]string)
 
 		util.PrintStep("DistributeDeploySetupMaster", "installing masters...")
-		remoteResults := util.StartRemoteCmds(
+		remoteResults, _ := util.StartRemoteCmds(
 			hosts,
 			util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
 				strings.Join(ModJobDistributeDeploy.NewCmd(DistributeDeployJob{
