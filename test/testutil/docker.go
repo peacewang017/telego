@@ -52,7 +52,8 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 拉取并运行构建镜像，映射项目目录
 	cmd := exec.Command("docker", "run", "-d",
-		"-p", "2222:22",
+		"-p", "2222:22", // for test main node ssh
+		"-p", "8003:8003", // for test fileserver
 		"-v", hostProjectPath+":/telego",
 		"telego_build",
 		"tail", "-f", "/dev/null")
