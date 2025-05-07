@@ -230,6 +230,7 @@ func Main() {
 		rootCmd.AddCommand(cmd)
 	}
 
+	util.PrintStep("telego start", "telego try dispatch sub jobs")
 	rootCmd.Execute()
 	if !parseFail {
 		return

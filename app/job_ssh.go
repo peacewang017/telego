@@ -101,6 +101,7 @@ func (m ModJobSshStruct) sshLocal(job SshJob) {
 
 // 用正则表达式验证公钥格式
 func (m ModJobSshStruct) setupThisNode(pubkey string) {
+	util.PrintStep("job ssh", "setupThisNode started")
 	pubkey = strings.TrimSpace(pubkey)
 	innerSetPubkeyOnThisNode := func(pubkey string) error {
 		// 校验公钥格式
@@ -151,6 +152,7 @@ func (m ModJobSshStruct) setupThisNode(pubkey string) {
 	err := innerSetPubkeyOnThisNode(pubkey)
 	if err != nil {
 		fmt.Println(color.RedString("set pubkey failed: %v", err))
+		os.Exit(1)
 	} else {
 		fmt.Println(color.GreenString("set pubkey success"))
 	}
@@ -354,7 +356,8 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 			return strings.Contains(src, keyword)
 		})
 	}) {
-		fmt.Println(color.RedString("ssh setup remote pubkey error: %s", output))
+		fmt.Println(color.RedString("ssh setup remote pubkey error: %v", output))
+		fmt.Println(color.RedString("recent remote log: %v", util.GetMostRecentRemoteLog()))
 		os.Exit(1)
 		// // debug sshd_config
 		// util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
