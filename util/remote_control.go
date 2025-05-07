@@ -279,16 +279,16 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 		// localConfigPath := GetCurUserConfigPath()
 
 		// 执行单个命令的辅助函数
-		execRemoteCmd := func(cmd string, desc string) error {
-			ch <- NodeMsg{Index: index, Output: desc, Complete: false}
-			client, session, err := sshSession(server, user, usePasswd, port)
-			if err != nil {
-				return fmt.Errorf("ssh error: %v", err)
-			}
-			defer client.Close()
-			defer session.Close()
-			return session.Run(cmd)
-		}
+		// execRemoteCmd := func(cmd string, desc string) error {
+		// 	ch <- NodeMsg{Index: index, Output: desc, Complete: false}
+		// 	client, session, err := sshSession(server, user, usePasswd, port)
+		// 	if err != nil {
+		// 		return fmt.Errorf("ssh error: %v", err)
+		// 	}
+		// 	defer client.Close()
+		// 	defer session.Close()
+		// 	return session.Run(cmd)
+		// }
 
 		// 执行命令并获取输出的辅助函数
 		execRemoteCmdWithOutput := func(cmd string, desc string) (string, string, error) {
@@ -314,15 +314,6 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			errMsg := fmt.Sprintf("Error %s, err:%v, stdout:%v, stderr:%v", note, err, stdout, stderr)
 			ch <- NodeMsg{Index: index, Output: errMsg, Complete: true}
 			file.WriteString(errMsg + "\n")
-		}
-
-		// 1. 准备远程目录
-		if err := execRemoteCmd(
-			fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
-			fmt.Sprintf("prepare remote %s secret directory", host),
-		); err != nil {
-			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
-			return
 		}
 
 		// 2. 检查并配置 sudo 权限
@@ -374,6 +365,23 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 				return
 			}
 			file.WriteString(fmt.Sprintf("Verifying sudo config output: %s\n", stdout))
+		}
+
+		// 1. 准备远程目录
+		if stdout, stderr, err := execRemoteCmdWithOutput(
+			fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
+			fmt.Sprintf("prepare remote %s secret directory", host),
+		); err != nil {
+			debugErr(stdout, stderr, err, "准备远程目录时出错")
+			// try with sudo
+			if stdout, stderr, err := execRemoteCmdWithOutput(
+				fmt.Sprintf("sudo mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
+				fmt.Sprintf("sudo prepare remote %s secret directory", host),
+			); err != nil {
+				debugErr(stdout, stderr, err, "准备远程目录时出错")
+			}
+			// ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
+			// return
 		}
 
 		// // 3. 配置 rclone
