@@ -3,6 +3,7 @@ package test3_main_node_config
 import (
 	"os/exec"
 	"path"
+	"path/filepath"
 	"telego/test/testutil"
 	"telego/util"
 	"testing"
@@ -57,6 +58,13 @@ func TestSSHKeyGeneration(t *testing.T) {
 	if err = testutil.RunCommand(t, cmd); err != nil {
 		// debug telego log
 		t.Fatalf("初始化main node file server失败: %v", err)
+	}
+
+	// upload telego
+	t.Logf("upload telego to main node")
+	_, err = util.ModRunCmd.NewBuilder("python3", filepath.Join(projectRoot, "3.upload.py")).ShowProgress().BlockRun()
+	if err != nil {
+		t.Fatalf("上传telego到 main node 失败: %v", err)
 	}
 
 	t.Logf("telego log for start main node file server:\n %s", testutil.GetMostRecentLog(t))

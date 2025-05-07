@@ -52,7 +52,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 
 	// 拉取并运行构建镜像，映射项目目录
 	cmd := exec.Command("docker", "run", "-d",
-		"-p", "2222:22", // for test main node ssh
+		"-p", "2222:2222", // for test main node ssh
 		"-p", "8003:8003", // for test fileserver
 		"-v", hostProjectPath+":/telego",
 		"telego_build",
@@ -103,7 +103,8 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// 配置SSH服务器和创建用户
 	t.Log("RunSSHDocker 配置SSH服务器和创建用户")
 	configSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
-		"echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "+
+		"echo 'Port 2222' >> /etc/ssh/sshd_config && "+
+			"echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && "+
 			"echo 'root:password' | chpasswd && "+
 			"useradd -m -s /bin/bash abc && "+
 			"echo 'abc:abc' | chpasswd && "+

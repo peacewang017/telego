@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"telego/util"
 	clusterconf "telego/util/cluster_conf"
@@ -291,6 +292,13 @@ func (m ModJobSshStruct) genOrGetKey() {
 			fmt.Println("User canceled config ssh no pw access")
 			os.Exit(1)
 		}
+
+		mainNodePort, err := strconv.Atoi(util.MainNodeSshPort)
+		if err != nil {
+			fmt.Println(color.RedString("failed to convert main node ssh port to int: %v", err))
+			os.Exit(1)
+		}
+
 		m.setupClusterInner(clusterconf.ClusterConfYmlModel{
 			Global: clusterconf.ClusterConfYmlModelGlobal{
 				SshUser:   util.MainNodeUser,
@@ -298,7 +306,8 @@ func (m ModJobSshStruct) genOrGetKey() {
 			},
 			Nodes: map[string]clusterconf.ClusterConfYmlModelNode{
 				"dummy": {
-					Ip: util.MainNodeIp,
+					Ip:   util.MainNodeIp,
+					Port: mainNodePort,
 				},
 			},
 		})
@@ -310,6 +319,9 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	fmt.Printf("集群配置: %+v\n", clusterConf)
 
 	hosts := funk.Map(clusterConf.Nodes, func(_ string, node clusterconf.ClusterConfYmlModelNode) string {
+		if node.Port != 0 {
+			return fmt.Sprintf("%s@%s:%d", clusterConf.Global.SshUser, node.Ip, node.Port)
+		}
 		return fmt.Sprintf("%s@%s", clusterConf.Global.SshUser, node.Ip)
 	}).([]string)
 
@@ -322,30 +334,31 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	}
 	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
 
-	output, logfps := util.StartRemoteCmds(
+	// output, logfps :=
+	util.StartRemoteCmds(
 		hosts,
-		// install telego,
-		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+"; "+
+
+		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
 			// update authorized_keys
 			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
 		clusterConf.Global.SshPasswd,
 	)
-	logfdebug, err := os.ReadFile(logfps[0] + ".debug")
-	if err != nil {
-		fmt.Println(color.RedString("read logfdebug failed: %v", err))
-		os.Exit(1)
-	}
-	srcs := []string{output[0], string(logfdebug)}
-	keywords := []string{"error", "失败"}
-	if funk.Any(srcs, func(src string) bool {
-		return funk.Any(keywords, func(keyword string) bool {
-			return strings.Contains(src, keyword)
-		})
-	}) {
-		fmt.Println(color.RedString("ssh error: %s", output))
-		// debug sshd_config
-		util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
-	}
+	// logfdebug, err := os.ReadFile(logfps[0] + ".debug")
+	// if err != nil {
+	// 	fmt.Println(color.RedString("read logfdebug failed: %v", err))
+	// 	os.Exit(1)
+	// }
+	// srcs := []string{output[0], string(logfdebug)}
+	// keywords := []string{"error", "失败"}
+	// if funk.Any(srcs, func(src string) bool {
+	// 	return funk.Any(keywords, func(keyword string) bool {
+	// 		return strings.Contains(src, keyword)
+	// 	})
+	// }) {
+	// 	fmt.Println(color.RedString("ssh error: %s", output))
+	// 	// debug sshd_config
+	// 	util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
+	// }
 }
 
 // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd

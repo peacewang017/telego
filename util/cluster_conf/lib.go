@@ -10,6 +10,7 @@ type ClusterConfYmlModelGlobal struct {
 
 type ClusterConfYmlModelNode struct {
 	Ip   string   `yaml:"ip"`
+	Port int      `yaml:"port,omitempty"`
 	Tags []string `yaml:"tags,omitempty"`
 }
 
