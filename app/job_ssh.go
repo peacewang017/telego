@@ -276,15 +276,60 @@ func (m ModJobSshStruct) genOrGetKey() {
 		}
 		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPrivate{}, string(localpri))
 
-		_, err = os.ReadFile(ed25519PubFilePath)
+		localpub, err := os.ReadFile(ed25519PubFilePath)
 		if err != nil {
 			fail = true
 			failInfo = fmt.Sprintf("failed to read local pub key: %v", err)
 			return
 		}
 
-		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPrivate{}, string(localpri))
+		util.MainNodeConfWriter{}.WriteSecretConf(util.SecretConfTypeSshPublic{}, string(localpub))
+
+		util.PrintStep("ssh genOrGetKey", color.BlueString("uploading keys to self"))
+		password, ok := util.GetPassword("设置ssh免密访问需要配置密码")
+		if !ok {
+			fmt.Println("User canceled config ssh no pw access")
+			os.Exit(1)
+		}
+		m.setupClusterInner(clusterconf.ClusterConfYmlModel{
+			Global: clusterconf.ClusterConfYmlModelGlobal{
+				SshUser:   util.MainNodeUser,
+				SshPasswd: password,
+			},
+			Nodes: map[string]clusterconf.ClusterConfYmlModelNode{
+				"dummy": {
+					Ip: util.MainNodeIp,
+				},
+			},
+		})
 	}
+}
+
+func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYmlModel) {
+	// 打印解析后的内容
+	fmt.Printf("集群配置: %+v\n", clusterConf)
+
+	hosts := funk.Map(clusterConf.Nodes, func(_ string, node clusterconf.ClusterConfYmlModelNode) string {
+		return fmt.Sprintf("%s@%s", clusterConf.Global.SshUser, node.Ip)
+	}).([]string)
+
+	// read pubkey
+	pubkeyFile := filepath.Join(homedir.HomeDir(), ".ssh", "id_ed25519.pub")
+	pubkeybytes, err := os.ReadFile(pubkeyFile)
+	if err != nil {
+		fmt.Println(color.RedString("read pubkey failed: %v", err))
+		os.Exit(1)
+	}
+	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
+
+	util.StartRemoteCmds(
+		hosts,
+		// install telego,
+		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
+			// update authorized_keys
+			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
+		clusterConf.Global.SshPasswd,
+	)
 }
 
 // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
@@ -313,30 +358,7 @@ func (m ModJobSshStruct) setupCluster() {
 		os.Exit(1)
 	}
 
-	// 打印解析后的内容
-	fmt.Printf("解析后的集群配置: %+v\n", clusterConf)
-
-	hosts := funk.Map(clusterConf.Nodes, func(nodename string, node clusterconf.ClusterConfYmlModelNode) string {
-		return fmt.Sprintf("%s@%s", clusterConf.Global.SshUser, node.Ip)
-	}).([]string)
-
-	// read pubkey
-	pubkeyFile := filepath.Join(homedir.HomeDir(), ".ssh", "id_ed25519.pub")
-	pubkeybytes, err := os.ReadFile(pubkeyFile)
-	if err != nil {
-		fmt.Println(color.RedString("read pubkey failed: %v", err))
-		os.Exit(1)
-	}
-	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
-
-	util.StartRemoteCmds(
-		hosts,
-		// install telego,
-		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
-			// update authorized_keys
-			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
-		clusterConf.Global.SshPasswd,
-	)
+	m.setupClusterInner(clusterConf)
 }
 
 func (m ModJobSshStruct) NewSshCmd(

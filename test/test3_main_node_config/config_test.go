@@ -71,8 +71,18 @@ func TestSSHKeyGeneration(t *testing.T) {
 
 	t.Logf("telego log for gen or get key:\n %s", testutil.GetMostRecentLog(t))
 
+	t.Logf("debug authorized_keys:")
+	sshCmd := exec.Command("sshpass", "-p", util.MainNodeUser, "ssh",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-p", "2222", util.MainNodeUser+"@"+util.MainNodeIp, "cat", "~/.ssh/authorized_keys")
+	if err := testutil.RunCommand(t, sshCmd); err != nil {
+		t.Fatalf("SSH 连接 abc 测试失败: %v", err)
+	}
+
 	// 测试 SSH 连接
-	sshCmd := exec.Command("ssh",
+	t.Logf("test ssh no pw access")
+	sshCmd = exec.Command("ssh",
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-p", "2222", util.MainNodeUser+"@"+util.MainNodeIp, "echo", "test")
