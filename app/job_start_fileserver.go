@@ -142,8 +142,8 @@ WantedBy=multi-user.target
 			fmt.Println("服务文件已生成:", serviceFilePath)
 
 			// 重新加载 systemd 配置
-			if err := exec.Command("systemctl", "daemon-reload").Run(); err != nil {
-				fmt.Printf("无法重新加载 systemd 配置: %v\n", err)
+			if output, err := util.ModRunCmd.NewBuilder("systemctl", "daemon-reload").ShowProgress().BlockRun(); err != nil {
+				fmt.Printf("无法重新加载 systemd 配置, err: %v, output: %s\n。", err, output)
 				os.Exit(1)
 			}
 
