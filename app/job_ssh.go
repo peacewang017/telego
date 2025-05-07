@@ -336,7 +336,7 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	}
 	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
 
-	output, _ := util.StartRemoteCmds(
+	output, logfps := util.StartRemoteCmds(
 		hosts,
 
 		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
@@ -357,7 +357,8 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 		})
 	}) {
 		fmt.Println(color.RedString("ssh setup remote pubkey error: %v", output))
-		fmt.Println(color.RedString("recent remote log: %v", util.GetMostRecentRemoteLog()))
+		logf, _ := os.ReadFile(logfps[0])
+		fmt.Println(color.RedString("∂∂remote log: %v", string(logf)))
 		os.Exit(1)
 		// // debug sshd_config
 		// util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
