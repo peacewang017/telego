@@ -352,6 +352,19 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 		}
 		debugFile.WriteString(fmt.Sprintf("Checking sudo permissions output: %s\n", stdout))
 
+		rcloneName := ""
+		configRcloneOnce := func() {
+			if rcloneName != "" {
+				return
+			}
+			// 定义需要在多个代码块中共享的变量
+			rcloneName = base64.RawURLEncoding.EncodeToString([]byte(server))
+			err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
+				WithUser(user, usePasswd).WithPort(port).DoConfig()
+			if err != nil {
+				debugErr("", "", err, "配置rclone失败", true)
+			}
+		}
 		if strings.Contains(stdout, "sudo_need_config") {
 			// 1. 创建本地临时密码文件
 			localPasswdFile := "/tmp/sudo_passwd"
@@ -361,13 +374,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			}
 			defer os.Remove(localPasswdFile)
 
-			// 定义需要在多个代码块中共享的变量
-			rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
-			err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
-				WithUser(user, usePasswd).WithPort(port).DoConfig()
-			if err != nil {
-				debugErr("", "", err, "配置rclone失败", true)
-			}
+			configRcloneOnce()
 
 			// 2. 使用 rclone 传输密码文件到远程
 			remotePasswdFile := fmt.Sprintf("sudo_passwd_%s", user)
@@ -416,6 +423,18 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			}
 			// ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
 			// return
+		}
+
+		// cur user config
+		curUserConfig := GetUserConfigPath(user)
+		WriteAdminUserConfig(&AdminUserConfig{
+			Username: user,
+			Password: usePasswd,
+		})
+		configRcloneOnce()
+		if err := RcloneSyncFileToFile(curUserConfig, fmt.Sprintf("%s:%s", rcloneName, curUserConfig)); err != nil {
+			debugErr("", "", err, "传输当前用户配置时出错", true)
+			return
 		}
 
 		// // 3. 配置 rclone

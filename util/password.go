@@ -15,6 +15,7 @@ import (
 // GetPassword 尝试从环境变量获取密码，如果失败则提示用户输入
 // 返回密码和获取是否成功的标志
 func GetPassword(uiPrompt string) (string, bool) {
+	PrintStep("GetPassword", uiPrompt)
 	// 1. 先尝试从环境变量获取密码
 	password, ok := os.LookupEnv("SSH_PW")
 	if ok {
