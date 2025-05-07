@@ -325,7 +325,7 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	output, _ := util.StartRemoteCmds(
 		hosts,
 		// install telego,
-		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
+		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+"; "+
 			// update authorized_keys
 			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
 		clusterConf.Global.SshPasswd,
