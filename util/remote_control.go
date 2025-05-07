@@ -158,13 +158,13 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 		lines := strings.Split(result, "\n")
 		// assert line count >=2
 		if len(lines) < 3 {
-			errMsg := fmt.Sprintf("Command output has fewer than 3 lines: %v", result)
+			errMsg := fmt.Sprintf("GetRemoteSys command output has fewer than 3 lines: %v", result)
 			Logger.Warnf(errMsg)
 			logContet, err := os.ReadFile(logpaths[i])
 			if err != nil {
 				fmt.Println(color.BlueString("%s\n and we failed to read remote log"), errMsg)
 			} else {
-				fmt.Println(color.BlueString("%s,\n log content read: \n %s", errMsg, string(logContet)))
+				fmt.Println(color.BlueString("%s,\n log content read begin >>> \n %s \n<<< log content read end", errMsg, string(logContet)))
 			}
 			return UnknownSystem{}
 		}
@@ -187,6 +187,14 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 		case "windows":
 			return WindowsSystem{}
 		default:
+			errMsg := fmt.Sprintf("GetRemoteSys not match system: %v", result)
+			Logger.Warnf(errMsg)
+			logContet, err := os.ReadFile(logpaths[i])
+			if err != nil {
+				fmt.Println(color.BlueString("%s\n and we failed to read remote log"), errMsg)
+			} else {
+				fmt.Println(color.BlueString("%s,\n log content read begin >>> \n %s \n<<< log content read end", errMsg, string(logContet)))
+			}
 			return UnknownSystem{}
 		}
 
@@ -391,13 +399,13 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
 			fmt.Sprintf("prepare remote %s secret directory", host),
 		); err != nil {
-			debugErr(stdout, stderr, err, "准备远程目录时出错")
+			debugErr(stdout, stderr, err, "准备远程目录时出错，将使用sudo重试")
 			// try with sudo
 			if stdout, stderr, err := execRemoteCmdWithOutput(
 				fmt.Sprintf("sudo mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
 				fmt.Sprintf("sudo prepare remote %s secret directory", host),
 			); err != nil {
-				debugErr(stdout, stderr, err, "准备远程目录时出错")
+				debugErr(stdout, stderr, err, "sudo 准备远程目录时也出错")
 			}
 			// ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
 			// return
