@@ -92,12 +92,20 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 
 	// 安装SSH服务器
-	t.Log("RunSSHDocker 安装SSH服务器")
+	t.Log("RunSSHDocker 安装SSH服务器、sudo")
 	installSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
-		"apt-get update && apt-get install -y openssh-server && mkdir -p /run/sshd")
+		"apt-get update && apt-get install -y openssh-server sudo && mkdir -p /run/sshd")
 	if err := RunCommand(t, installSSHCmd); err != nil {
 		t.Fatalf("安装SSH服务器失败: %v", err)
 	}
+
+	// 添加安装sudo的代码
+	// t.Log("RunSSHDocker 安装sudo")
+	// installSudoCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
+	// 	"apt-get install -y sudo")
+	// if err := RunCommand(t, installSudoCmd); err != nil {
+	// 	t.Fatalf("安装sudo失败: %v", err)
+	// }
 
 	// 配置SSH服务器和创建用户
 	t.Log("RunSSHDocker 配置SSH服务器和创建用户")
@@ -116,8 +124,6 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	if err := RunCommand(t, configSSHCmd); err != nil {
 		t.Fatalf("配置SSH服务器失败: %v", err)
 	}
-
-	
 
 	// 检查 PATH 环境变量
 	t.Log("RunSSHDocker 检查 PATH 环境变量")
@@ -162,19 +168,19 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	if err := sshCmd.Wait(); err != nil {
 		t.Fatalf("启用 SSH 密码认证失败: %v\n标准输出: %s\n标准错误: %s",
 			err, string(stdoutBytes), string(stderrBytes))
-	}else{
+	} else {
 		t.Log("启用 SSH 密码认证成功, stdout: %s", string(stdoutBytes))
 	}
 
 	// 测试 SSH 访问 (用户 abc，使用密码认证)
 	t.Log("RunSSHDocker 测试SSH密码认证")
 	// install sshpass first
-	
+
 	// 检查 sshpass 是否安装
 	checkCmd := exec.Command("which", "sshpass")
 	if err := checkCmd.Run(); err != nil {
 		t.Log("sshpass 未安装，尝试安装...")
-		
+
 		// 定义要尝试的包管理器命令
 		installCommands := []struct {
 			name string
@@ -186,26 +192,26 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 			{"apk", exec.Command("apk", "add", "sshpass")},
 			{"brew", exec.Command("brew", "install", "sshpass")},
 		}
-		
+
 		// 尝试每个包管理器
 		installed := false
 		for _, install := range installCommands {
 			t.Logf("尝试使用 %s 安装 sshpass...", install.name)
 			err := RunCommand(t, install.cmd)
-			if  err == nil {
+			if err == nil {
 				t.Logf("使用 %s 安装 sshpass 成功", install.name)
 				installed = true
 				break
 			} else {
-				t.Logf("使用 %s 安装 sshpass 失败, err: %w", install.name,err)
+				t.Logf("使用 %s 安装 sshpass 失败, err: %w", install.name, err)
 			}
 		}
-		
+
 		// 检查是否安装成功
 		if !installed {
 			t.Fatal("所有安装方法都失败，请手动安装 sshpass 后重试")
 		}
-		
+
 		// 再次检查 sshpass 是否可用
 		if err := exec.Command("which", "sshpass").Run(); err != nil {
 			t.Fatal("sshpass 安装后仍然不可用")
@@ -213,9 +219,9 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	}
 
 	// 使用sshpass工具自动提供密码
-	sshCmd = exec.Command("sshpass", "-p", "abc", 
-		"ssh", "abc@localhost", "-p", "2222", 
-		"-o", "StrictHostKeyChecking=no", 
+	sshCmd = exec.Command("sshpass", "-p", "abc",
+		"ssh", "abc@localhost", "-p", "2222",
+		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null", "echo", "helloworld")
 	if err := RunCommand(t, sshCmd); err != nil {
 		t.Fatalf("SSH 密码访问失败: %v", err)
@@ -252,8 +258,8 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 	stdoutReader := bufio.NewReader(stdout)
 	stderrReader := bufio.NewReader(stderr)
 
-	stdoutStr:=""
-	stderrStr:=""
+	stdoutStr := ""
+	stderrStr := ""
 	go func() {
 		for {
 			line, err := stdoutReader.ReadString('\n')
@@ -264,7 +270,7 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 				break
 			}
 			t.Log(line)
-			stdoutStr+=line+"\n"
+			stdoutStr += line + "\n"
 		}
 	}()
 
@@ -278,14 +284,14 @@ func RunCommand(t *testing.T, cmd *exec.Cmd) error {
 				break
 			}
 			t.Log(line)
-			stderrStr+=line+"\n"
+			stderrStr += line + "\n"
 		}
 	}()
 
-	err= cmd.Wait()
-	if err!=nil{
+	err = cmd.Wait()
+	if err != nil {
 		t.Logf("run command wait err %v, stdout: %s, stderr: %s", err, stdoutStr, stderrStr)
-		return fmt.Errorf("命令执行失败: %w, stdout: %s, stderr: %s", 
+		return fmt.Errorf("命令执行失败: %w, stdout: %s, stderr: %s",
 			err, stdoutStr, stderrStr)
 	}
 	return nil
