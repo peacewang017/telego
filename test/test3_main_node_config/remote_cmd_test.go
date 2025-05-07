@@ -37,7 +37,7 @@ func TestRemoteCmd(t *testing.T) {
 		// 	}
 		// }
 
-		if res[0] != "helloworld" {
+		if res[0] != "helloworld\n" {
 			// 读取日志文件内容，使用标准库
 			logContent, readErr := os.ReadFile(logfile[0])
 			if readErr != nil {
