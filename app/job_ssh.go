@@ -334,8 +334,7 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	}
 	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
 
-	// output, logfps :=
-	util.StartRemoteCmds(
+	output, _ := util.StartRemoteCmds(
 		hosts,
 
 		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
@@ -348,17 +347,18 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	// 	fmt.Println(color.RedString("read logfdebug failed: %v", err))
 	// 	os.Exit(1)
 	// }
-	// srcs := []string{output[0], string(logfdebug)}
-	// keywords := []string{"error", "失败"}
-	// if funk.Any(srcs, func(src string) bool {
-	// 	return funk.Any(keywords, func(keyword string) bool {
-	// 		return strings.Contains(src, keyword)
-	// 	})
-	// }) {
-	// 	fmt.Println(color.RedString("ssh error: %s", output))
-	// 	// debug sshd_config
-	// 	util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
-	// }
+	srcs := []string{output[0]}
+	keywords := []string{"Error Process exited"}
+	if funk.Any(srcs, func(src string) bool {
+		return funk.Any(keywords, func(keyword string) bool {
+			return strings.Contains(src, keyword)
+		})
+	}) {
+		fmt.Println(color.RedString("ssh setup remote pubkey error: %s", output))
+		os.Exit(1)
+		// // debug sshd_config
+		// util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
+	}
 }
 
 // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
