@@ -86,7 +86,7 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 	// remove all systemctl listed by which systemctl
 	t.Log("RunSSHDocker 移除所有的 systemctl")
 	removeSystemctlCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
-		"rm -f $(which -a systemctl) || echo 'No systemctl found'")
+		"rm -f /bin/systemctl || echo 'No systemctl found'")
 	if err := RunCommand(t, removeSystemctlCmd); err != nil {
 		t.Logf("移除 systemctl 时出现警告 (可忽略): %v", err)
 	}
