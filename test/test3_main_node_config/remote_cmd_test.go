@@ -18,7 +18,12 @@ func TestRemoteCmd(t *testing.T) {
 			if readErr != nil {
 				t.Logf("读取日志文件失败: %v", readErr)
 			}
-			t.Fatalf("远程命令执行失败，返回行数不足，预期至少3行，实际%d行。日志内容：%s", lines, string(logContent))
+			debugContent, readErr := os.ReadFile(logfile[0] + ".debug")
+			if readErr != nil {
+				t.Logf("读取调试日志文件失败: %v", readErr)
+			}
+			t.Fatalf("远程命令执行失败，返回行数不足，预期至少3行，实际%d行。日志内容：%s\n调试日志内容：%s",
+				lines, string(logContent), string(debugContent))
 		}
 
 		// 验证命令输出包含预期结果

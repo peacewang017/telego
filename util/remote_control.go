@@ -274,12 +274,18 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			return
 		}
 		defer file.Close()
+		debugFile, err := os.OpenFile(logFile+".debug", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error opening debug file: %v", err), Complete: true}
+			return
+		}
+		defer debugFile.Close()
 
 		// 调试错误信息的辅助函数
 		debugErr := func(stdout, stderr string, err error, note string, end bool) {
 			errMsg := fmt.Sprintf("Error %s, err:%v, stdout:%v, stderr:%v", note, err, stdout, stderr)
 			ch <- NodeMsg{Index: index, Output: errMsg, Complete: end}
-			file.WriteString(errMsg + "\n")
+			debugFile.WriteString(errMsg + "\n")
 		}
 
 		file.WriteString(fmt.Sprintf("Running command on host %s:\n  %s\n", host, remote_cmd))
