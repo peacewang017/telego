@@ -276,9 +276,9 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 		defer file.Close()
 
 		// 调试错误信息的辅助函数
-		debugErr := func(stdout, stderr string, err error, note string) {
+		debugErr := func(stdout, stderr string, err error, note string, end bool) {
 			errMsg := fmt.Sprintf("Error %s, err:%v, stdout:%v, stderr:%v", note, err, stdout, stderr)
-			ch <- NodeMsg{Index: index, Output: errMsg, Complete: true}
+			ch <- NodeMsg{Index: index, Output: errMsg, Complete: end}
 			file.WriteString(errMsg + "\n")
 		}
 
@@ -341,7 +341,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			fmt.Sprintf("checking sudo permissions for %s", host),
 		)
 		if err != nil {
-			debugErr(stdout, stderr, err, "检查 sudo 权限时出错")
+			debugErr(stdout, stderr, err, "检查 sudo 权限时出错", true)
 			return
 		}
 		file.WriteString(fmt.Sprintf("Checking sudo permissions output: %s\n", stdout))
@@ -350,7 +350,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			// 1. 创建本地临时密码文件
 			localPasswdFile := "/tmp/sudo_passwd"
 			if err := os.WriteFile(localPasswdFile, []byte(usePasswd), 0600); err != nil {
-				debugErr("", "", err, "创建本地密码文件时出错")
+				debugErr("", "", err, "创建本地密码文件时出错", true)
 				return
 			}
 			defer os.Remove(localPasswdFile)
@@ -360,13 +360,13 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
 				WithUser(user, usePasswd).WithPort(port).DoConfig()
 			if err != nil {
-				debugErr("", "", err, "配置rclone失败")
+				debugErr("", "", err, "配置rclone失败", true)
 			}
 
 			// 2. 使用 rclone 传输密码文件到远程
 			remotePasswdFile := fmt.Sprintf("sudo_passwd_%s", user)
 			if err := RcloneSyncFileToFile(localPasswdFile, fmt.Sprintf("%s:%s", rcloneName, remotePasswdFile)); err != nil {
-				debugErr("", "", err, "传输密码文件时出错")
+				debugErr("", "", err, "传输密码文件时出错", true)
 				return
 			}
 
@@ -377,7 +377,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 				fmt.Sprintf("configuring sudo for %s", host),
 			)
 			if err != nil {
-				debugErr(stdout, stderr, err, "配置 sudo 权限时出错")
+				debugErr(stdout, stderr, err, "配置 sudo 权限时出错", true)
 				return
 			}
 			file.WriteString(fmt.Sprintf("Configuring sudo output: %s\n", stdout))
@@ -388,7 +388,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 				fmt.Sprintf("verifying sudo config for %s", host),
 			)
 			if err != nil {
-				debugErr(stdout, stderr, err, "验证 sudo 配置时出错")
+				debugErr(stdout, stderr, err, "验证 sudo 配置时出错", true)
 				return
 			}
 			file.WriteString(fmt.Sprintf("Verifying sudo config output: %s\n", stdout))
@@ -399,13 +399,14 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			fmt.Sprintf("mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
 			fmt.Sprintf("prepare remote %s secret directory", host),
 		); err != nil {
-			debugErr(stdout, stderr, err, "准备远程目录时出错，将使用sudo重试")
+			debugErr(stdout, stderr, err, "准备远程目录时出错，将使用sudo重试", false)
 			// try with sudo
 			if stdout, stderr, err := execRemoteCmdWithOutput(
-				fmt.Sprintf("sudo mkdir -p /teledeploy_secret/config && chown -R %s:%s /teledeploy_secret/config && chmod 700 /teledeploy_secret/config", user, user),
+				fmt.Sprintf("sudo mkdir -p /teledeploy_secret/config && sudo chown -R %s:%s /teledeploy_secret/config && sudo chmod 700 /teledeploy_secret/config", user, user),
 				fmt.Sprintf("sudo prepare remote %s secret directory", host),
 			); err != nil {
-				debugErr(stdout, stderr, err, "sudo 准备远程目录时也出错")
+				debugErr(stdout, stderr, err, "sudo 准备远程目录时也出错", true)
+				return
 			}
 			// ch <- NodeMsg{Index: index, Output: fmt.Sprintf("Error preparing directory: %v", err), Complete: true}
 			// return
