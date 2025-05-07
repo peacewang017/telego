@@ -83,22 +83,6 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 		t.Fatalf("容器启动超时，在 %d 次尝试后仍未就绪", maxAttempts)
 	}
 
-	// remove all systemctl listed by which systemctl
-	t.Log("RunSSHDocker 移除所有的 systemctl")
-	removeSystemctlCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
-		"rm -f /bin/systemctl || echo 'No systemctl found'")
-	if err := RunCommand(t, removeSystemctlCmd); err != nil {
-		t.Logf("移除 systemctl 时出现警告 (可忽略): %v", err)
-	}
-
-	// 在容器内执行 Python 脚本
-	t.Log("RunSSHDocker 配置systemctl")
-	scriptCmd := exec.Command("docker", "exec", containerID,
-		"python3", "/telego/scripts/systemctl_docker.py")
-	if err := RunCommand(t, scriptCmd); err != nil {
-		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
-	}
-
 	// 安装SSH服务器
 	t.Log("RunSSHDocker 安装SSH服务器、sudo")
 	installSSHCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
@@ -178,6 +162,36 @@ func RunSSHDocker(t *testing.T) (string, func()) {
 			err, string(stdoutBytes), string(stderrBytes))
 	} else {
 		t.Log("启用 SSH 密码认证成功, stdout: %s", string(stdoutBytes))
+	}
+
+	// remove all systemctl listed by which systemctl
+	t.Log("RunSSHDocker 移除所有的 systemctl")
+	removeSystemctlCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
+		"rm -f /bin/systemctl || echo 'No systemctl found'")
+	if err := RunCommand(t, removeSystemctlCmd); err != nil {
+		t.Logf("移除 systemctl 时出现警告 (可忽略): %v", err)
+	}
+
+	t.Log("RunSSHDocker 调试 systemctl")
+	debugSystemctlCmd := exec.Command("docker", "exec", containerID, "bash", "-c",
+		"which -a systemctl")
+	if err := RunCommand(t, debugSystemctlCmd); err != nil {
+		t.Logf("调试 systemctl 时出现警告 (可忽略): %v", err)
+	}
+
+	// 在容器内执行 Python 脚本
+	t.Log("RunSSHDocker 配置systemctl")
+	scriptCmd := exec.Command("docker", "exec", containerID,
+		"python3", "/telego/scripts/systemctl_docker.py")
+	if err := RunCommand(t, scriptCmd); err != nil {
+		t.Fatalf("执行 systemctl_docker.py 脚本失败: %v", err)
+	}
+
+	t.Log("RunSSHDocker 再次调试 systemctl")
+	debugSystemctlCmd = exec.Command("docker", "exec", containerID, "bash", "-c",
+		"which -a systemctl")
+	if err := RunCommand(t, debugSystemctlCmd); err != nil {
+		t.Logf("调试 systemctl 时出现警告 (可忽略): %v", err)
 	}
 
 	// 测试 SSH 访问 (用户 abc，使用密码认证)
