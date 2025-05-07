@@ -11,33 +11,33 @@ func TestRemoteCmd(t *testing.T) {
 		util.MainNodeUser + "@" + util.MainNodeIp + ":" + util.MainNodeSshPort}, "echo helloworld", util.MainNodeUser)
 	// if lines < 3, fatal with log
 	{
-		lines := len(res[0])
-		if lines < 3 {
-			// 读取日志文件内容，使用标准库
-			logContent, readErr := os.ReadFile(logfile[0])
-			if readErr != nil {
-				t.Logf("读取日志文件失败: %v", readErr)
-			}
-			debugContent, readErr := os.ReadFile(logfile[0] + ".debug")
-			if readErr != nil {
-				t.Logf("读取调试日志文件失败: %v", readErr)
-			}
-			t.Fatalf("远程命令执行失败，返回行数不足，预期至少3行，实际%d行。日志内容：%s\n调试日志内容：%s",
-				lines, string(logContent), string(debugContent))
-		}
+		// lines := len(res[0])
+		// if lines < 3 {
+		// 	// 读取日志文件内容，使用标准库
+		// 	logContent, readErr := os.ReadFile(logfile[0])
+		// 	if readErr != nil {
+		// 		t.Logf("读取日志文件失败: %v", readErr)
+		// 	}
+		// 	debugContent, readErr := os.ReadFile(logfile[0] + ".debug")
+		// 	if readErr != nil {
+		// 		t.Logf("读取调试日志文件失败: %v", readErr)
+		// 	}
+		// 	t.Fatalf("远程命令执行失败，返回行数不足，预期至少3行，实际%d行。日志内容：%s\n调试日志内容：%s",
+		// 		lines, string(logContent), string(debugContent))
+		// }
 
 		// 验证命令输出包含预期结果
-		foundHelloWorld := false
-		for _, lineRune := range res[0] {
-			// 将rune转换为string进行比较
-			line := string(lineRune)
-			if line == "helloworld" {
-				foundHelloWorld = true
-				break
-			}
-		}
+		// foundHelloWorld := false
+		// for _, lineRune := range res[0] {
+		// 	// 将rune转换为string进行比较
+		// 	line := string(lineRune)
+		// 	if line == "helloworld" {
+		// 		foundHelloWorld = true
+		// 		break
+		// 	}
+		// }
 
-		if !foundHelloWorld {
+		if res[0] != "helloworld" {
 			// 读取日志文件内容，使用标准库
 			logContent, readErr := os.ReadFile(logfile[0])
 			if readErr != nil {

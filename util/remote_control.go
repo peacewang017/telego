@@ -109,15 +109,15 @@ func GetRemoteArch(hosts []string, usePasswd string, currentSystems []SystemType
 		cmd := currentSystems[i].GetArchCmd()
 		hostResults, _ := StartRemoteCmds([]string{host}, cmd, usePasswd)
 		if len(hostResults) > 0 {
-			lines := strings.Split(hostResults[0], "\n")
-			// assert line count >=2
-			if len(lines) < 3 {
-				Logger.Warnf("Command output for host %s has fewer than 3 lines: %v", host, hostResults[0])
-				continue
-			}
+			// lines := strings.Split(hostResults[0], "\n")
+			// // assert line count >=2
+			// if len(lines) < 3 {
+			// 	Logger.Warnf("Command output for host %s has fewer than 3 lines: %v", host, hostResults[0])
+			// 	continue
+			// }
 
 			// 从第3行开始处理
-			result := strings.Join(lines[2:], "\n")
+			result := hostResults[0]
 
 			// 清理结果
 			result = strings.ToLower(strings.TrimSpace(result))
@@ -155,21 +155,21 @@ func GetRemoteSys(hosts []string, usePasswd string) []SystemType {
 	i := 0
 	remoteSys := funk.Map(results, func(result string) SystemType {
 		// remove first 2 line
-		lines := strings.Split(result, "\n")
-		// assert line count >=2
-		if len(lines) < 3 {
-			errMsg := fmt.Sprintf("GetRemoteSys command output has fewer than 3 lines: %v", result)
-			Logger.Warnf(errMsg)
-			logContet, err := os.ReadFile(logpaths[i])
-			if err != nil {
-				fmt.Println(color.BlueString("%s\n and we failed to read remote log"), errMsg)
-			} else {
-				fmt.Println(color.BlueString("%s,\n log content read begin >>> \n %s \n<<< log content read end", errMsg, string(logContet)))
-			}
-			return UnknownSystem{}
-		}
+		// lines := strings.Split(result, "\n")
+		// // assert line count >=2
+		// if len(lines) < 3 {
+		// 	errMsg := fmt.Sprintf("GetRemoteSys command output has fewer than 3 lines: %v", result)
+		// 	Logger.Warnf(errMsg)
+		// 	logContet, err := os.ReadFile(logpaths[i])
+		// 	if err != nil {
+		// 		fmt.Println(color.BlueString("%s\n and we failed to read remote log"), errMsg)
+		// 	} else {
+		// 		fmt.Println(color.BlueString("%s,\n log content read begin >>> \n %s \n<<< log content read end", errMsg, string(logContet)))
+		// 	}
+		// 	return UnknownSystem{}
+		// }
 
-		result = strings.Join(lines[2:], "\n")
+		result = results[0]
 
 		// 清理结果
 		result = strings.ToLower(strings.TrimSpace(result))
@@ -350,7 +350,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) ([]stri
 			debugErr(stdout, stderr, err, "检查 sudo 权限时出错", true)
 			return
 		}
-		file.WriteString(fmt.Sprintf("Checking sudo permissions output: %s\n", stdout))
+		debugFile.WriteString(fmt.Sprintf("Checking sudo permissions output: %s\n", stdout))
 
 		if strings.Contains(stdout, "sudo_need_config") {
 			// 1. 创建本地临时密码文件
