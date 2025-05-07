@@ -322,7 +322,7 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	}
 	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
 
-	output, _ := util.StartRemoteCmds(
+	output, logfps := util.StartRemoteCmds(
 		hosts,
 		// install telego,
 		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+"; "+
@@ -330,7 +330,18 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
 		clusterConf.Global.SshPasswd,
 	)
-	if strings.Contains(output[0], "ssh error:") {
+	logfdebug, err := os.ReadFile(logfps[0] + ".debug")
+	if err != nil {
+		fmt.Println(color.RedString("read logfdebug failed: %v", err))
+		os.Exit(1)
+	}
+	srcs := []string{output[0], string(logfdebug)}
+	keywords := []string{"error", "失败"}
+	if funk.Any(srcs, func(src string) bool {
+		return funk.Any(keywords, func(keyword string) bool {
+			return strings.Contains(src, keyword)
+		})
+	}) {
 		fmt.Println(color.RedString("ssh error: %s", output))
 		// debug sshd_config
 		util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
