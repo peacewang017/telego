@@ -6,7 +6,7 @@ if os.geteuid() != 0:
     sudo="sudo "
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-mock_systemctl_path = os.path.join(current_dir, "mock_systemctl")
+mock_systemctl_path = os.path.join(current_dir, "mock_systemctl.py")
 target_path = "/usr/bin/systemctl"
 
 # 备份原始 systemctl 如果存在的话
