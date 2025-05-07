@@ -337,7 +337,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			defer os.Remove(localPasswdFile)
 
 			// 2. 使用 rclone 传输密码文件到远程
-			remotePasswdFile := fmt.Sprintf("/tmp/sudo_passwd_%s", user)
+			remotePasswdFile := fmt.Sprintf("sudo_passwd_%s", user)
 			if err := RcloneSyncFileToFile(localPasswdFile, fmt.Sprintf("%s:%s", rcloneName, remotePasswdFile)); err != nil {
 				debugErr("", "", err, "传输密码文件时出错")
 				return
