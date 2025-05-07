@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"telego/util"
@@ -144,22 +143,23 @@ WantedBy=multi-user.target
 			// debug with which -a systemctl
 			fmt.Println("debug with which -a systemctl")
 			util.ModRunCmd.NewBuilder("which", "-a", "systemctl").ShowProgress().BlockRun()
+			util.ModRunCmd.NewBuilder("which", "-a", "systemctl").WithRoot().ShowProgress().BlockRun()
 
 			// 重新加载 systemd 配置
-			if output, err := util.ModRunCmd.NewBuilder("systemctl", "daemon-reload").ShowProgress().BlockRun(); err != nil {
+			if output, err := util.ModRunCmd.NewBuilder("systemctl", "daemon-reload").WithRoot().ShowProgress().BlockRun(); err != nil {
 				fmt.Printf("无法重新加载 systemd 配置, err: %v, output: %s\n。", err, output)
 				os.Exit(1)
 			}
 
 			// 启动服务
-			if err := exec.Command("systemctl", "start", "python-fileserver.service").Run(); err != nil {
-				fmt.Printf("无法启动服务: %v\n", err)
+			if output, err := util.ModRunCmd.NewBuilder("systemctl", "start", "python-fileserver.service").WithRoot().ShowProgress().BlockRun(); err != nil {
+				fmt.Printf("无法启动服务, err: %v, output: %s\n", err, output)
 				os.Exit(1)
 			}
 
 			// 设置服务开机自启
-			if err := exec.Command("systemctl", "enable", "python-fileserver.service").Run(); err != nil {
-				fmt.Printf("无法设置服务开机自启: %v\n", err)
+			if output, err := util.ModRunCmd.NewBuilder("systemctl", "enable", "python-fileserver.service").WithRoot().ShowProgress().BlockRun(); err != nil {
+				fmt.Printf("无法设置服务开机自启, err: %v, output: %s\n", err, output)
 				os.Exit(1)
 			}
 

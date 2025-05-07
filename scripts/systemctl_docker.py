@@ -17,8 +17,22 @@ os.system(backup_command)
 link_command = f"{sudo}ln -sf {mock_systemctl_path} {target_path}"
 print(f"Creating symlink: {link_command}")
 result = os.system(link_command)
-
 if result == 0:
     print(f"成功: mock_systemctl 已链接到 {target_path}")
 else:
     print(f"错误: 创建符号链接失败，退出代码 {result}") 
+
+
+print(f"设置权限: {target_path}")
+result2 = os.system(f"{sudo}chmod 700 {target_path}")
+if result2 == 0:
+    print(f"成功: 设置权限成功")
+else:
+    print(f"错误: 设置权限失败，退出代码 {result2}")
+
+print(f"测试运行")
+result3 = os.system(f"{sudo}systemctl status docker")
+if result3 == 0:
+    print(f"成功: 测试运行成功")
+else:
+    print(f"错误: 测试运行失败，退出代码 {result3}")
