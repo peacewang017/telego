@@ -1,4 +1,6 @@
 import os,sys    
+# chdir to this file's dir
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 print("before run this, config main node as rclone 'remote'")
 
