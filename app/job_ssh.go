@@ -122,6 +122,12 @@ func (m ModJobSshStruct) setupThisNode(pubkey string) {
 			os.MkdirAll(authorizedKeysDirPath, 0755)
 		}
 
+		// prepare authorized_keys file
+		if _, err := os.Stat(authorizedKeysPath); os.IsNotExist(err) {
+			// os.Create(authorizedKeysPath)
+			os.WriteFile(authorizedKeysPath, []byte(""), 0644)
+		}
+
 		// 读取现有的 authorized_keys 文件内容
 		existingKeys, err := ioutil.ReadFile(authorizedKeysPath)
 		if err != nil {
