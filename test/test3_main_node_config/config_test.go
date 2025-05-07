@@ -98,5 +98,5 @@ func TestSSHKeyGeneration(t *testing.T) {
 		t.Fatalf("SSH 连接 abc 测试失败: %v", err)
 	}
 
-	t.Log("SSH 密钥生成和连接测试成功")
+	t.Fatalf("SSH 密钥生成和连接测试成功")
 }

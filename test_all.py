@@ -345,7 +345,7 @@ def update_ci_workflow():
     test_steps = [
         {
             "name": "\"Step 1: 初始化环境\"",
-            "run": "python test_all.py --only-init 2>&1 | tee test_output_1_init.log"
+            "run": "python test_all.py --only-init" # 2>&1 | tee test_output_1_init.log"
         }
     ]
 
@@ -354,10 +354,11 @@ def update_ci_workflow():
     # 添加直接测试步骤 (根据TESTS["direct"]生成)
     if TESTS["direct"]:
         for i, test in enumerate(TESTS["direct"]):
-            test_name = os.path.basename(test).replace("_test.go", "")
+            # test_name = os.path.basename(test).replace("_test.go", "")
+            test_name = test.replace("/", "-").replace("_", "-").replace(".go", "")
             test_steps.append({
                 "name": f"\"Step {step_index}: {test_name}\"",
-                "run": f"go test -v {test} 2>&1 | tee test_output_{step_index}_{test_name}.log",
+                "run": f"go test -v {test}" # 2>&1 | tee test_output_{step_index}_{test_name}.log",
                 # "continue-on-error": True
             })
             step_index += 1
@@ -365,10 +366,11 @@ def update_ci_workflow():
     # 添加Docker测试步骤 (根据TESTS["in_docker"]生成)
     if TESTS["in_docker"]:
         for i, test in enumerate(TESTS["in_docker"]):
-            test_name = os.path.basename(test).replace("_test.go", "")
+            # test_name = os.path.basename(test).replace("_test.go", "")
+            test_name = test.replace("/", " ").replace("_", "-").replace(".go", "")
             test_steps.append({
                 "name": f"\"Step {step_index}: {test_name}\"",
-                "run": f"docker exec telego-container go test ./{test} -v 2>&1 | tee test_output_{step_index}_{test_name}.log",
+                "run": f"docker exec telego-container go test ./{test} -v", # 2>&1 | tee test_output_{step_index}_{test_name}.log",
                 # "continue-on-error": True
             })
             step_index += 1
