@@ -121,12 +121,15 @@ func (r *RcloneConfiger) DoConfig() error {
 		port := r.Port
 		user := r.User
 
-		// 使用 rclone obscure 加密密码
-		encryptedPass, err := ModRunCmd.NewBuilder("rclone", "obscure", r.Password).BlockRun()
-		if err != nil {
-			log.Fatalf("密码加密失败: %v\n", err)
+		encryptedPass := ""
+		if r.Password != "" {
+			encryptedPass_, err := ModRunCmd.NewBuilder("rclone", "obscure", r.Password).BlockRun()
+			if err != nil {
+				log.Fatalf("密码加密失败: %v\n", err)
+			}
+			encryptedPass = strings.ReplaceAll(strings.ReplaceAll(string(encryptedPass_), "\n", ""), " ", "")
 		}
-		encryptedPass = strings.ReplaceAll(strings.ReplaceAll(string(encryptedPass), "\n", ""), " ", "")
+		// 使用 rclone obscure 加密密码
 
 		// 输出加密的密码
 		// fmt.Printf("加密后的密码: %s\n", encryptedPass)
@@ -137,9 +140,13 @@ func (r *RcloneConfiger) DoConfig() error {
 			"host=" + host,
 			"user=" + user,
 			"port=" + port,
-			"pass=" + encryptedPass,
+			// "pass=" + encryptedPass,
 			"use_insecure_cipher=false",
 		}
+		if encryptedPass != "" {
+			cmds = append(cmds, "pass="+encryptedPass)
+		}
+
 		// fmt.Println(color.GreenString("rclone config create cmds: %+v", cmds))
 		output, err := ModRunCmd.NewBuilder(cmds[0], cmds[1:]...).BlockRun()
 		if err != nil {

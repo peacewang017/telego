@@ -246,6 +246,7 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 
 	// runRemoteCommand 执行单个远程命令
 	runRemoteCommand := func(host string, index int, logFile string, ch chan<- NodeMsg, remote_cmd string) {
+
 		// 打开日志文件（追加模式），确保在函数退出时关闭文件
 		file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -253,6 +254,13 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			return
 		}
 		defer file.Close()
+
+		// 调试错误信息的辅助函数
+		debugErr := func(stdout, stderr string, err error, note string) {
+			errMsg := fmt.Sprintf("Error %s, err:%v, stdout:%v, stderr:%v", note, err, stdout, stderr)
+			ch <- NodeMsg{Index: index, Output: errMsg, Complete: true}
+			file.WriteString(errMsg + "\n")
+		}
 
 		file.WriteString(fmt.Sprintf("Running command on host %s:\n  %s\n", host, remote_cmd))
 
@@ -273,8 +281,6 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			port = parts[1]
 		}
 
-		// 定义需要在多个代码块中共享的变量
-		rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
 		// remoteConfigPath := fmt.Sprintf("/teledeploy_secret/config/userconfig_%s", user)
 		// localConfigPath := GetCurUserConfigPath()
 
@@ -309,13 +315,6 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 			return stdout.String(), stderr.String(), nil
 		}
 
-		// 调试错误信息的辅助函数
-		debugErr := func(stdout, stderr string, err error, note string) {
-			errMsg := fmt.Sprintf("Error %s, err:%v, stdout:%v, stderr:%v", note, err, stdout, stderr)
-			ch <- NodeMsg{Index: index, Output: errMsg, Complete: true}
-			file.WriteString(errMsg + "\n")
-		}
-
 		// 2. 检查并配置 sudo 权限
 		stdout, stderr, err := execRemoteCmdWithOutput(
 			"if sudo -n true 2>/dev/null; then echo 'sudo_ok'; else echo 'sudo_need_config'; fi",
@@ -335,6 +334,14 @@ func StartRemoteCmds(hosts []string, remoteCmd string, usePasswd string) []strin
 				return
 			}
 			defer os.Remove(localPasswdFile)
+
+			// 定义需要在多个代码块中共享的变量
+			rcloneName := base64.RawURLEncoding.EncodeToString([]byte(server))
+			err = NewRcloneConfiger(RcloneConfigTypeSsh{}, rcloneName, server).
+				WithUser(user, usePasswd).WithPort(port).DoConfig()
+			if err != nil {
+				debugErr("", "", err, "配置rclone失败")
+			}
 
 			// 2. 使用 rclone 传输密码文件到远程
 			remotePasswdFile := fmt.Sprintf("sudo_passwd_%s", user)
