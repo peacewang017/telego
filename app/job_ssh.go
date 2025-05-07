@@ -322,7 +322,7 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 	}
 	_ = base64.StdEncoding.EncodeToString(pubkeybytes)
 
-	util.StartRemoteCmds(
+	output, _ := util.StartRemoteCmds(
 		hosts,
 		// install telego,
 		util.ModRunCmd.CmdModels().InstallTelegoWithPy()+" && "+
@@ -330,6 +330,11 @@ func (m ModJobSshStruct) setupClusterInner(clusterConf clusterconf.ClusterConfYm
 			strings.Join(m.NewSshCmd(SshJob{Mode: SshModeSetupThisNode}.ModeString()), " "),
 		clusterConf.Global.SshPasswd,
 	)
+	if strings.Contains(output[0], "ssh error:") {
+		fmt.Println(color.RedString("ssh error: %s", output))
+		// debug sshd_config
+		util.ModRunCmd.NewBuilder("cat", "/etc/ssh/sshd_config").WithRoot().ShowProgress().BlockRun()
+	}
 }
 
 // https://qcnoe3hd7k5c.feishu.cn/wiki/V6eHwZm1aiofeykaSd5cmgPcnSe#share-Hc1hdGT26oI4I0xPaplcEhMundd
