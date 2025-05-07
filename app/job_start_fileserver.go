@@ -255,7 +255,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		remoteCmd2 := "chown {user} /usr/bin/telego"
 		remoteCmd3 := strings.Join(m.NewStartFileserverCmd(
 			StartFileserverJob{Mode: StartFileserverModeCallee}.ModeString()), " ")
-		util.StartRemoteCmds(
+		output, _ := util.StartRemoteCmds(
 			mainNodeHostArr,
 			// install telego,
 			fmt.Sprintf("python3 -c \"import os;os.system('%s' if os.geteuid() == 0 else 'sudo %s')\" && ", remoteCmd0, remoteCmd0)+
@@ -269,7 +269,7 @@ func (m ModJobStartFileserverStruct) startFileserverCaller() {
 		util.PrintStep("StartFileserver", color.BlueString("checking fileserver"))
 		_, err := util.HttpGetUrlContent(fmt.Sprintf("http://%s:8003", util.MainNodeIp))
 		if err != nil {
-			fmt.Println(color.RedString("fileserver not started, err: %v", err))
+			fmt.Println(color.RedString("fileserver not started, err: %v, remote cmd output: %s", err, output))
 			os.Exit(1)
 		}
 		fmt.Println(color.GreenString("fileserver started"))
