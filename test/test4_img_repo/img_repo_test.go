@@ -2,6 +2,7 @@ package test3_main_node_config
 
 import (
 	"os"
+	"telego/test/testutil"
 	"telego/util"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func TestImgRepoSetup(t *testing.T) {
-	// projectRoot := testutil.GetProjectRoot(t)
+	projectRoot := testutil.GetProjectRoot(t)
 
 	// prepare main node docker with secret config
 	// create ImgRepoConfig
@@ -34,20 +35,23 @@ func TestImgRepoSetup(t *testing.T) {
 	}
 
 	// rclone config to main node
-	_, err = util.ModRunCmd.NewBuilder("rclone", "copy", "/tmp/img_repo", "remote:/teledeploy_secret").ShowProgress().BlockRun()
-	if err != nil {
+	cmd := testutil.NewPtyCommand(t, "rclone", "copy", "/tmp/img_repo", "remote:/teledeploy_secret")
+	cmd.Dir = projectRoot
+	if err = testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("rclone to main node failed: %v", err)
 	}
 
 	// telego start img repo
-	_, err = util.ModRunCmd.NewBuilder("telego", "img-repo").ShowProgress().BlockRun()
-	if err != nil {
+	cmd = testutil.NewPtyCommand(t, "telego", "img-repo")
+	cmd.Dir = projectRoot
+	if err = testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("telego start img repo failed: %v", err)
 	}
 
 	// docker login
-	_, err = util.ModRunCmd.NewBuilder("docker", "login", "127.0.0.1:5000", "-u", "testadmin", "-p", "testpassword").ShowProgress().BlockRun()
-	if err != nil {
+	cmd = testutil.NewPtyCommand(t, "docker", "login", "127.0.0.1:5000", "-u", "testadmin", "-p", "testpassword")
+	cmd.Dir = projectRoot
+	if err = testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("docker login failed: %v", err)
 	}
 
