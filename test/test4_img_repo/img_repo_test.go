@@ -35,7 +35,7 @@ func TestImgRepoSetup(t *testing.T) {
 	}
 
 	// rclone config to main node
-	cmd := testutil.NewPtyCommand(t, "rclone", "copy", "/tmp/img_repo", "remote:/teledeploy_secret")
+	cmd := testutil.NewPtyCommand(t, "rclone", "copy", "/tmp/img_repo", "remote:/teledeploy_secret/config")
 	cmd.Dir = projectRoot
 	if err = testutil.RunCommand(t, cmd); err != nil {
 		t.Fatalf("rclone to main node failed: %v", err)
