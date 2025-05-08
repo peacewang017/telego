@@ -1,9 +1,9 @@
 package app
 
 import (
-	"os"
 	"strings"
 	"telego/util"
+	"path/filepath"
 )
 
 func (i *MenuItem) LoadSubPrjs() {
@@ -11,10 +11,11 @@ func (i *MenuItem) LoadSubPrjs() {
 	if i.Name == "deploy" { // this is mapped to project dir
 
 		// i.Children = []*MenuItem{}
-		listPrjDir, err := os.ReadDir(ConfigLoad().ProjectDir)
+		listPrjDir, err := util.DirLinkTool.List(ConfigLoad().ProjectDir)
 		if err == nil {
 			for _, entry := range listPrjDir {
-				if entry.IsDir() {
+				entryPath := filepath.Join(ConfigLoad().ProjectDir, entry.Name())
+				if is,err:=util.DirLinkTool.IsDirOrLinkDir(entryPath);is && err==nil {
 					{
 						//sort mappedRes
 						var mi *MenuItem
@@ -72,6 +73,9 @@ func (i *MenuItem) LoadSubPrjs() {
 							i.Children = append(i.Children, mi)
 						}
 					}
+				}else{
+					is,err:= util.DirLinkTool.IsDirOrLinkDir(entryPath)
+					util.Logger.Warnf("skip %s,isDirOrLinkDir:%v,err:%v", entryPath,is,err)
 				}
 			}
 		}
