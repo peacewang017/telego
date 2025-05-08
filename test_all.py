@@ -21,6 +21,7 @@ TESTS = {
         "test/test1_build/build_test.go",  # 构建测试
         "test/test2_build_and_run_shortcut/shortcut_test.go",  # 快捷方式测试
         "test/test3_main_node_config/config_test.go",  # 主节点配置测试
+        "test/test4_img_repo/img_repo_test.go",  # 镜像仓库测试
     ]
 }
 

@@ -42,4 +42,7 @@ jobs:
       - name: "Step 4: test test3-main-node-config config-test"
         run: |
           docker exec telego-container go test ./test/test3_main_node_config/config_test.go -v
+      - name: "Step 5: test test4-img-repo img-repo-test"
+        run: |
+          docker exec telego-container go test ./test/test4_img_repo/img_repo_test.go -v
 
