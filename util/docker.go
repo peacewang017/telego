@@ -6,12 +6,22 @@ import (
 	"strings"
 )
 
-var ImgRepoAddressNoPrefix = strings.ReplaceAll(
-	strings.ReplaceAll(
-		ImgRepoAddressWithPrefix,
-		"https://", ""),
-	"http://", "",
-)
+// var ImgRepoAddressNoPrefix = strings.ReplaceAll(
+//
+//	strings.ReplaceAll(
+//		ImgRepoAddressWithPrefix,
+//		"https://", ""),
+//	"http://", "",
+//
+// )
+func ImgRepoAddressNoPrefix() string {
+	return strings.ReplaceAll(
+		strings.ReplaceAll(
+			ImgRepoAddressWithPrefix,
+			"https://", ""),
+		"http://", "",
+	)
+}
 
 type ModDockerStruct struct {
 }
@@ -30,7 +40,7 @@ func (m ModDockerStruct) DockerLoginCmd() ([]string, error) {
 	if dockerUser == "" || dockerPassword == "" {
 		return []string{}, errors.New("docker user or password is empty")
 	}
-	return []string{"docker", "login", ImgRepoAddressNoPrefix, "-u", dockerUser, "-p", dockerPassword}, nil
+	return []string{"docker", "login", ImgRepoAddressNoPrefix(), "-u", dockerUser, "-p", dockerPassword}, nil
 }
 
 func (m ModDockerStruct) BuildDockerImage(dockerfilePath string, targetImgName string) *CmdBuilder {

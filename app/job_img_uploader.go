@@ -762,7 +762,7 @@ func (m *ImgUploaderUploadHandlerV2) checkAndUploadImgs(imageDir string) ([]stri
 				{
 					tagWithArch := func(info ImageInfo, arch string) (string, error) {
 						// 1. tag by info.id
-						registryTag := util.UrlJoin(util.ImgRepoAddressNoPrefix, "/teleinfra/"+imageBaseName(info)+":"+info.tag+"_"+arch)
+						registryTag := util.UrlJoin(util.ImgRepoAddressNoPrefix(), "/teleinfra/"+imageBaseName(info)+":"+info.tag+"_"+arch)
 						_, err := util.ModRunCmd.ShowProgress(
 							"docker", "tag", info.id, registryTag,
 						).WithRoot().BlockRun()
@@ -790,9 +790,9 @@ func (m *ImgUploaderUploadHandlerV2) checkAndUploadImgs(imageDir string) ([]stri
 					push := func(tag string) error {
 						cmds, err := util.ModDocker.PushDockerImage(tag)
 						for _, cmd := range cmds {
-							_, err := cmd.BlockRun()
+							outPut, err := cmd.BlockRun()
 							if err != nil {
-								return fmt.Errorf("docker upload %v failed %v", cmd.Cmds(), err)
+								return fmt.Errorf("docker upload %v failed %v,	Output:%s", cmd.Cmds(), err, outPut)
 							}
 						}
 						return err
@@ -811,7 +811,7 @@ func (m *ImgUploaderUploadHandlerV2) checkAndUploadImgs(imageDir string) ([]stri
 					}
 
 					// 3. manifest, allow fail
-					noArchTag := util.UrlJoin(util.ImgRepoAddressNoPrefix, "/teleinfra/"+imageBaseName(*amdInfo)+":"+amdInfo.tag)
+					noArchTag := util.UrlJoin(util.ImgRepoAddressNoPrefix(), "/teleinfra/"+imageBaseName(*amdInfo)+":"+amdInfo.tag)
 					fmt.Println("manifest noArchTag:", noArchTag)
 					util.ModRunCmd.ShowProgress(
 						"docker", "manifest", "create",
@@ -930,12 +930,14 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 	// c.JSON(http.StatusOK, gin.H{
 	// 	"message": "Upload started",
 	// })
-
+	fmt.Println("11111")
 	// 检查请求方法是否为 POST
 	if c.Request.Method != "POST" {
 		c.JSON(405, gin.H{"error": "Invalid request method"})
 		return
 	}
+
+	fmt.Println("22222")
 
 	// 获取所有表单数据
 	form, err := c.MultipartForm()
@@ -943,6 +945,7 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Error retrieving form data"})
 		return
 	}
+	fmt.Println("33333")
 
 	// 获取文件部分
 	files := form.File["files"] // 获取字段名为 "files" 的文件
@@ -951,11 +954,14 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("44444")
+
 	// tarFiles := []string{}
 	tempDir, err := os.MkdirTemp("", "uploads-*")
 	defer os.RemoveAll(tempDir)
 
 	if err != nil {
+		fmt.Println("55555")
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Error creating temp dir: %v", err)})
 		return
 	}
@@ -967,6 +973,8 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 			}
 			file, err := fileHeader.Open()
 			if err != nil {
+				fmt.Println("66666")
+
 				c.JSON(500, gin.H{"error": fmt.Sprintf("Error opening file %s: %v", fileHeader.Filename, err)})
 				return
 			}
@@ -976,11 +984,13 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 
 			dstPath := filepath.Join(tempDir, fileHeader.Filename)
 			if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+				fmt.Println("77777")
 				c.JSON(500, gin.H{"error": fmt.Sprintf("Error creating directory: %v", err)})
 				return
 			}
 			dstFile, err := os.Create(dstPath)
 			if err != nil {
+				fmt.Println("88888")
 				c.JSON(500, gin.H{"error": fmt.Sprintf("Error saving file %s: %v", fileHeader.Filename, err)})
 				return
 			}
@@ -988,6 +998,7 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 
 			// 将上传的文件内容写入目标文件
 			if _, err := io.Copy(dstFile, file); err != nil {
+				fmt.Println("99999")
 				c.JSON(500, gin.H{"error": fmt.Sprintf("Error writing file %s: %v", fileHeader.Filename, err)})
 				return
 			}
@@ -999,6 +1010,7 @@ func ImgUploaderUploadHandlerV1(c *gin.Context) {
 
 	succress, err := (&ImgUploaderUploadHandlerV2{}).checkAndUploadImgs(tempDir)
 	if err != nil {
+		fmt.Println("aaaaa")
 		c.JSON(500, gin.H{"error": fmt.Errorf("checkAndUploadImgs failed: %v", err)})
 		return
 	}

@@ -101,18 +101,22 @@ func (m ModJobImgRepoStruct) startImgRepo() error {
 		if err != nil {
 			return "", err
 		}
-		yamlConfig["hostname"] = util.ImgRepoAddressNoPrefix
+		yamlConfig["hostname"] = util.ImgRepoAddressNoPrefix()
 		yamlConfig["harbor_admin_password"] = config.Password
 
 		port := "80"
-		if strings.Contains(":", util.ImgRepoAddressNoPrefix) {
-			port = strings.Split(util.ImgRepoAddressNoPrefix, ":")[1]
+		if strings.Contains(util.ImgRepoAddressNoPrefix(), ":") {
+			port = strings.Split(util.ImgRepoAddressNoPrefix(), ":")[1]
+			yamlConfig["hostname"] = strings.Split(util.ImgRepoAddressNoPrefix(), ":")[0]
 		}
+
 		if strings.HasPrefix(util.ImgRepoAddressWithPrefix, "http://") {
+			util.PrintStep("img repo", "starting img repo with http, addr:"+util.ImgRepoAddressNoPrefix()+", port:"+port)
 			yamlConfig["http"] = map[string]string{"port": port}
 			// remove https key
 			delete(yamlConfig, "https")
 		} else {
+			util.PrintStep("img repo", "starting img repo with https, addr:"+util.ImgRepoAddressNoPrefix()+", port:"+port)
 			if port == "80" {
 				port = "443"
 			}

@@ -194,7 +194,7 @@ for image in images:
 			f"--arch amd64 {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix}_amd64")
 	run_command(f"{sudo_prefix}docker manifest push {REPO_HOST}/{REPO_NAMESPACE}/{img_key_no_prefix} --insecure")
 	os.chdir("..")
-		`, strings.Join(imageNamesWithQuotes, ","), util.ImgRepoAddressNoPrefix, imgRepo.User, imgRepo.Password)
+		`, strings.Join(imageNamesWithQuotes, ","), util.ImgRepoAddressNoPrefix(), imgRepo.User, imgRepo.Password)
 
 				util.StartRemoteCmds([]string{
 					fmt.Sprintf("%s@%s", util.MainNodeUser, util.MainNodeIp),

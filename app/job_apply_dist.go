@@ -233,8 +233,8 @@ func (m ModJobApplyDistStruct) gendaemonset(
 			return arr
 		}(),
 		"Distribution": d.Distribution,
-		"InitImage":    path.Join(util.ImgRepoAddressNoPrefix, "teleinfra/python:3.12.5"),
-		"RuntimeImage": path.Join(util.ImgRepoAddressNoPrefix, "teleinfra/openssh:9.1"),
+		"InitImage":    path.Join(util.ImgRepoAddressNoPrefix(), "teleinfra/python:3.12.5"),
+		"RuntimeImage": path.Join(util.ImgRepoAddressNoPrefix(), "teleinfra/openssh:9.1"),
 		"MainNodeIP":   util.MainNodeIp,
 		"InstallCurlCmd": strings.ReplaceAll(
 			util.ModContainerCmd{}.WithHostCurl("/host-usr"), "\n", "\n          "),

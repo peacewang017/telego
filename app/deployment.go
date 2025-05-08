@@ -86,7 +86,7 @@ func (d *DeploymentYaml) Verify(prjName string, prjDir string, yml []byte, skipR
 		// default values
 		LocalValues: map[string]LocalValue{
 			"MAIN_NODE_IP": LocalValueStr{Value: util.MainNodeIp},
-			"IMG_REPO":     LocalValueStr{Value: util.ImgRepoAddressNoPrefix},
+			"IMG_REPO":     LocalValueStr{Value: util.ImgRepoAddressNoPrefix()},
 			"BIN_PRJ":      LocalValueStr{Value: prjName},
 		},
 		Secrets: d.Secrets,

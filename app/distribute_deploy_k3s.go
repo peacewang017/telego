@@ -289,7 +289,7 @@ func (d DistributeDeployerK3s) PrepareMasterSetupCtxBase64(masters []clusterconf
 func (d DistributeDeployerK3s) Registry(registryConf util.ContainerRegistryConf) error {
 	util.PrintStep("Registry", "updating registry...")
 	regiPath := "/etc/rancher/k3s/registries.yaml"
-	registryHost := util.ImgRepoAddressNoPrefix
+	registryHost := util.ImgRepoAddressNoPrefix()
 	configHost := &map[string]interface{}{
 		"auth": map[string]interface{}{
 			"username": registryConf.User,
