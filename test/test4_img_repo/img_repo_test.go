@@ -37,22 +37,25 @@ func TestImgRepoSetup(t *testing.T) {
 	// rclone config to main node
 	cmd := testutil.NewPtyCommand(t, "rclone", "copy", "/tmp/img_repo", "remote:/teledeploy_secret/config")
 	cmd.Dir = projectRoot
-	if err = testutil.RunCommand(t, cmd); err != nil {
-		t.Fatalf("rclone to main node failed: %v", err)
+	testutil.RunCommand(t, cmd)
+	if testutil.GetPtyExitCode(t, cmd) != 0 {
+		t.Fatalf("rclone to main node failed")
 	}
 
 	// telego start img repo
 	cmd = testutil.NewPtyCommand(t, "telego", "img-repo")
 	cmd.Dir = projectRoot
-	if err = testutil.RunCommand(t, cmd); err != nil {
-		t.Fatalf("telego start img repo failed: %v", err)
+	testutil.RunCommand(t, cmd)
+	if testutil.GetPtyExitCode(t, cmd) != 0 {
+		t.Fatalf("telego start img repo failed")
 	}
 
 	// docker login
 	cmd = testutil.NewPtyCommand(t, "docker", "login", "127.0.0.1:5000", "-u", "testadmin", "-p", "testpassword")
 	cmd.Dir = projectRoot
-	if err = testutil.RunCommand(t, cmd); err != nil {
-		t.Fatalf("docker login failed: %v", err)
+	testutil.RunCommand(t, cmd)
+	if testutil.GetPtyExitCode(t, cmd) != 0 {
+		t.Fatalf("docker login failed")
 	}
 
 	t.Log("img repo started")

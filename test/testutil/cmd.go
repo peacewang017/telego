@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -24,7 +25,7 @@ func NewPtyCommand(t *testing.T, name string, args ...string) *exec.Cmd {
 
 	fullCmd := append([]string{name}, args...)
 	cmdStr := shellEscapeArgs(fullCmd)
-	return exec.Command("script", "-q", "-c", cmdStr, "/dev/null")
+	return exec.Command("script", "-q", "-c", "sh -c '"+cmdStr+"'; echo $? > /tmp/test_exit_code", "/dev/null")
 }
 
 // shellEscapeArgs 将参数数组安全拼接成 shell 字符串
@@ -35,4 +36,12 @@ func shellEscapeArgs(args []string) string {
 		escaped = append(escaped, strconv.Quote(arg))
 	}
 	return strings.Join(escaped, " ")
+}
+
+func GetPtyExitCode(t *testing.T, cmd *exec.Cmd) int {
+	code, err := os.ReadFile("/tmp/test_exit_code")
+	if err != nil {
+		t.Fatalf("read exit code failed: %v", err)
+	}
+	return int(code[0])
 }

@@ -162,7 +162,7 @@ func (m ModJobImgRepoStruct) startImgRepo() error {
 	}
 	generateHarborConfig()
 
-	_, err = util.ModRunCmd.NewBuilder("bash", "install.sh").
+	_, err = util.ModRunCmd.NewBuilder(util.ShellExec(), "install.sh").
 		WithRoot().
 		ShowProgress().
 		SetDir("/teledeploy_secret/harbor/pack/harbor").
