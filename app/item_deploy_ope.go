@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"telego/util"
 
@@ -22,6 +23,7 @@ func (i *MenuItem) EnterItemOpePrepare(prefixNodes []*MenuItem) DispatchExecRes 
 			err := DeploymentPrepare(parentNode.Name, parentNode.Deployment)
 			if err != nil {
 				fmt.Println(color.RedString("prepare '%s' failed, err: %v", parentNode.Name, err.Error()))
+				os.Exit(1)
 			} else {
 				fmt.Println(color.GreenString("prepare '%s' success", parentNode.Name))
 			}
@@ -44,6 +46,7 @@ func (i *MenuItem) EnterItemOpeUpload(prefixNodes []*MenuItem) DispatchExecRes {
 			err := DeploymentUpload(parentNode.Name, parentNode.Deployment)
 			if err != nil {
 				fmt.Println(color.RedString("upload '%s' failed, err: %v", parentNode.Name, err.Error()))
+				os.Exit(1)
 			} else {
 				fmt.Println(color.GreenString("upload '%s' success", parentNode.Name))
 			}
