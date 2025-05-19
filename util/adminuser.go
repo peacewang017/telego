@@ -3,10 +3,27 @@ package util
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
+
+func ShellExec() string {
+	maybeNames := []string{"bash", "sh", "fish", "ksh"}
+	for _, name := range maybeNames {
+		if _, err := exec.LookPath(name); err == nil {
+			return name
+		}
+	}
+	return "shell-not-found"
+	// // get which shell
+	// shell := os.Getenv("SHELL")
+	// if shell == "" {
+	// 	shell = "/bin/bash"
+	// }
+	// return shell
+}
 
 // AdminUserConfig 定义管理员用户配置的结构
 type AdminUserConfig struct {
